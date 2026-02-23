@@ -20,7 +20,7 @@
         <div class="logo-text">L. MANSFIELD</div>
         <div class="header-time" id="time">00:00 PM</div>
         <nav class="nav-links">
-            <a href="#" class="active">Home</a>            <a href="blog.html">Blog</a>            <a href="assets/resume2025.pdf" target="_blank">Resume</a>
+            <a href="#" class="active">Home</a>            <a href="blog.html">Blog</a>            <a href="assets/resume_current.pdf" target="_blank">Resume</a>
         </nav>
     </header>
 
@@ -93,19 +93,10 @@
         </div>
     </footer>
 
-    <script>
-        // Simple Time Update
-        function updateTime() {
-            const now = new Date();
-            let hours = now.getHours();
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12; 
-            document.getElementById('time').textContent = `Tampa (US) ${hours}:${minutes} ${ampm}`;
-        }
-        setInterval(updateTime, 60000);
-        updateTime();
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="assets/time.js"></script>
+    <script src="assets/blog.js"></script>
+    <script src="assets/transition.js"></script>
 </body>
 </html>

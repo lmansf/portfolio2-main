@@ -316,18 +316,18 @@ footer {
     width: 100%;
     height: 100%;
     overflow-y: auto;
-    padding: 100px 5vw;
-    display: flex;
-    justify-content: center;
+    padding: 150px 5vw 100px 5vw;
+    display: block; /* Removed flex centering to allow natural flow */
 }
 
 #blog-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 50px; /* Increased separation between cards */
+    gap: 50px;
     width: 100%;
     max-width: 1200px;
-    padding-bottom: 100px; /* Space for footer */
+    margin: 0 auto; /* Center the grid */
+    padding-bottom: 50px;
 }
 
 /* Project Card in Blog Grid */
@@ -474,3 +474,64 @@ footer {
         padding: 80px 20px;
     }
 }
+
+/* Blog Intro */
+.blog-intro {
+    max-width: 800px;
+    margin: 0 auto 50px auto; 
+    text-align: center;
+}
+
+.blog-intro h1 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: #fff;
+}
+
+.blog-intro p {
+    color: #BBB;
+    font-size: 1.1rem;
+    line-height: 1.6;
+}
+
+
+/* Page Transitions */
+main, .bg-layer {
+    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+}
+
+.page-exit {
+    transform: translateX(-10%);
+    opacity: 0;
+}
+
+.page-enter {
+    animation: fadeInSlide 0.5s forwards;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateX(10%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+
+/* Ensure animations override transitions */
+.page-enter {
+    animation: fadeInSlide 0.5s ease-out forwards;
+}
+
+
+
+/* Global Scrollbar Styles */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0f0e17; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
