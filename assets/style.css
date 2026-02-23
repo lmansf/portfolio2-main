@@ -54,7 +54,7 @@ body {
 .text-top {
     transform: translateY(-15%);
     left: -2vw;
-    color: #b0b0b0; /* Light grey */
+    color: #3d3d3d; /* Darker grey for better contrast with foreground content */
 }
 
 .text-bottom {
@@ -62,7 +62,7 @@ body {
     right: -2vw; /* Use right alignment for bottom text usually */
     text-align: right;
     width: 100%;
-    color: #606060; /* Darker grey */
+    color: #2a2a2a; /* Even darker grey */
 }
 
 /* Header */
@@ -324,7 +324,7 @@ footer {
 #blog-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 30px;
+    gap: 50px; /* Increased separation between cards */
     width: 100%;
     max-width: 1200px;
     padding-bottom: 100px; /* Space for footer */
@@ -332,7 +332,7 @@ footer {
 
 /* Project Card in Blog Grid */
 .project-card {
-    background: var(--card-bg);
+    background: rgba(15, 14, 23, 0.85); /* Darker background for better readability against large text */
     backdrop-filter: blur(10px);
     border: 1px solid var(--card-border);
     border-radius: 4px;
@@ -344,8 +344,9 @@ footer {
 }
 
 .project-card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-8px); /* Deeper lift on hover */
+    border-color: rgba(255, 255, 255, 0.5); /* Brighter border on hover for separation */
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5); /* Added shadow for depth */
 }
 
 .project-card-image {
