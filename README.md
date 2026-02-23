@@ -1,25 +1,45 @@
-# Portfolio Site Deployment (Vercel)
+# Portfolio Website
 
-This project is a static website and is ready to deploy for free on Vercel.
+This repository contains a static personal portfolio website with a dedicated blog page. The site is designed to be lightweight, fast, and easy to deploy, using plain HTML, CSS, and JavaScript.
 
-## One-time setup (no terminal)
+## Website Overview
 
-1. Open [https://vercel.com/new](https://vercel.com/new).
-2. Import the GitHub repository that contains this project.
-3. In **Configure Project**:
-   - **Framework Preset**: `Other`
-   - **Root Directory**: repository root (the folder containing `index.html`)
-   - **Build Command**: leave empty
-   - **Output Directory**: `.` (if prompted)
-4. Click **Deploy**.
+The website has two core views:
 
-## Verify after deploy
+- **Home page** (`index.html`) — the main landing experience for visitors.
+- **Projects page** (`projects.html`) — a curated overview of selected work.
+- **Blog page** (`blog.html`) — a separate page for blog content.
 
-- Home page loads: `/` (served from `index.html`)
-- Blog page loads: `/blog.html`
-- Optional pretty URL also works: `/blog`
+Both pages share the same style and interaction scripts from the `assets/` folder so the design feels consistent across the site.
 
-## Ongoing updates
+## Layout and File Structure
 
-Every push to your connected GitHub branch triggers an automatic redeploy in Vercel.
+The project is organized as follows:
+
+```text
+portfolio2-main/
+├─ index.html          # Main portfolio landing page
+├─ projects.html       # Projects showcase page
+├─ blog.html           # Blog page
+├─ vercel.json         # Deployment/routing configuration for Vercel
+└─ assets/
+   ├─ style.css        # Global styling, spacing, typography, and layout rules
+   ├─ transition.js    # Page/UI transition behavior
+   ├─ time.js          # Time/date related UI logic
+   └─ blog.js          # Blog page interaction logic
+```
+
+## Design Intent
+
+- Keep navigation and visual language consistent between pages.
+- Centralize styling in `assets/style.css` for maintainability.
+- Keep JavaScript modular by separating responsibilities per file.
+- Preserve a static-site architecture for quick loads and simple hosting.
+
+## AI Development Note
+
+This website and the user-facing implementation were developed with assistance from the following models:
+
+- **GPT-5.3-Codex**
+- **Gemini 3.1 Pro**
 

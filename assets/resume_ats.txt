@@ -1,0 +1,106 @@
+LOGAN MANSFIELD
+Tampa, Florida, United States
+Email: lmansf96@gmail.com
+LinkedIn: www.linkedin.com/in/lmansf96
+
+TARGET ROLE
+Data Engineer
+
+PROFESSIONAL SUMMARY
+System Analyst with hands-on operational systems experience and a strong transition path into Data Engineering. Experienced in SQL, Snowflake, Python, Power BI, and JavaScript, with practical project work in customer segmentation, reporting, and automation. Focused on building reliable data workflows, improving data quality, and supporting analytics-ready datasets for business stakeholders.
+
+DATA ENGINEERING SKILLS
+- SQL (query design, data validation, joins, aggregations)
+- Snowflake (data warehousing fundamentals)
+- Python (data analysis and scripting)
+- Data Warehousing concepts
+- Data Quality checks and validation workflows
+- Reporting data preparation for BI use cases
+- Microsoft Power BI
+- JavaScript, HTML, CSS
+
+TOOLS AND TECHNOLOGIES
+SQL | Snowflake | Python | Microsoft Power BI | Microsoft Fabric | JavaScript | CSS | Excel
+
+PROFESSIONAL EXPERIENCE
+
+ZooTampa at Lowry Park — IT Point of Sale Analyst
+Nov 2024 - Present | United States
+- Support and analyze point-of-sale systems in a production environment.
+- Troubleshoot system issues and improve process reliability for business operations.
+- Work across technical and business teams to maintain stable data-related workflows.
+- Use technical tooling (including JavaScript/CSS) in systems support and enhancements.
+
+ZooTampa at Lowry Park — Coordinator of Guest Engagement
+Aug 2023 - Nov 2024 | Tampa, Florida, United States
+- Coordinated operational workflows and service processes in a high-traffic environment.
+- Built stakeholder communication and process ownership skills applicable to cross-functional engineering work.
+
+ZooTampa at Lowry Park — Guest Engagement Guide
+Feb 2022 - Aug 2023 | Tampa, Florida, United States
+- Delivered frontline support while maintaining process consistency and execution quality.
+
+EXCEL ESPORTS — Data Analyst (Full-time)
+Aug 2019 - Jul 2022 | London, England, United Kingdom
+- Performed data analysis to support strategic and performance decisions.
+- Produced repeatable analysis outputs to support team planning and execution.
+
+Esports (League of Legends) — Data Analyst (Contract)
+Nov 2017 - Aug 2019 | Remote
+- Delivered analysis and reporting support for teams across OPL, LEC, and LCS.
+
+Dire Wolves — Data Analyst
+Jan 2018 - Jun 2018 | Remote
+- Created structured scouting and reflection reports from gameplay data.
+- Supported cross-time-zone collaboration and repeatable reporting workflows.
+
+Towson University — Paid Research Assistant
+Nov 2018 - Aug 2019 | Towson, Maryland
+- Processed and prepared soil samples for analysis using lab workflows.
+- Performed structured data tracking and documentation in datasheets.
+
+Towson University — Credit Research Assistant
+Jan 2019 - Aug 2019 | Towson, Maryland
+- Identified biological samples and recorded observations in structured datasets.
+
+PROJECTS
+
+RFM Analysis (Associated with ZooTampa at Lowry Park)
+Nov 2025
+- Built customer segmentation using Recency, Frequency, Monetary analysis.
+- Generated business-relevant groupings to support targeted decision-making.
+- Tools: Power BI, data analysis, SQL concepts.
+
+Production E-commerce Website (In Progress)
+Nov 2025 - Present
+- Building a production web application with HTML, CSS, and JavaScript.
+- Reinforces production readiness, deployment thinking, and maintainable architecture.
+
+Portfolio + Blog Workflow
+- Built and maintain a portfolio with automated blog handling components.
+- Demonstrates practical data flow handling from source to display layer.
+
+CERTIFICATIONS
+
+Snowflake
+Hands-On Essentials: Data Warehousing Workshop
+Issued Dec 2025
+Credential ID: 170260271
+
+LearnSQL.com
+SQL Professional: Certificate of Competency
+Issued Dec 2025
+Credential ID: CAC9A0/12/2025
+
+EDUCATION
+
+University of South Florida
+Bachelor of Science (BS), Ecology (On hold)
+
+Carroll Community College
+Associate's Degree, General Studies
+2014 - 2016
+
+ADDITIONAL INFORMATION
+- Open to Data Engineer roles and adjacent analytics engineering opportunities.
+- Interests include scalable analytics workflows, machine learning projects, and AI-focused systems work.

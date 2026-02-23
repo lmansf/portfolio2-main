@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (href === 'index.html' || href === 'blog.html') {
+        if (href === 'index.html' || href === 'blog.html' || href === 'projects.html') {
             e.preventDefault();
             navigateTo(href);
         }
