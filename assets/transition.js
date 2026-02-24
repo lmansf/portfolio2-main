@@ -16,6 +16,13 @@ function syncBodyElement(currentSelector, incomingDoc) {
 async function navigateTo(url) {
     const main = document.querySelector('main');
     const bgLayer = document.querySelector('.bg-layer');
+    const normalizedTarget = (url.split('/').pop() || 'index.html').toLowerCase();
+    const isHomeDestination = normalizedTarget === 'index.html';
+
+    if (isHomeDestination) {
+        main.classList.add('home-direction');
+        bgLayer.classList.add('home-direction');
+    }
     
     // 1. Add slide-out class
     main.classList.add('page-exit');
@@ -95,10 +102,14 @@ async function navigateTo(url) {
         setTimeout(() => {
             main.classList.remove('page-enter');
             bgLayer.classList.remove('page-enter');
+            main.classList.remove('home-direction');
+            bgLayer.classList.remove('home-direction');
         }, 500);
         
     } catch (err) {
         console.error('Navigation failed:', err);
+        main.classList.remove('home-direction');
+        bgLayer.classList.remove('home-direction');
         window.location.href = url; // Fallback
     }
 }
