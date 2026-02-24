@@ -1,3 +1,18 @@
+function syncBodyElement(currentSelector, incomingDoc) {
+    const currentElement = document.querySelector(currentSelector);
+    const incomingElement = incomingDoc.querySelector(currentSelector);
+
+    if (incomingElement) {
+        if (currentElement) {
+            currentElement.outerHTML = incomingElement.outerHTML;
+        } else {
+            document.body.insertBefore(incomingElement, document.querySelector('script'));
+        }
+    } else if (currentElement) {
+        currentElement.remove();
+    }
+}
+
 async function navigateTo(url) {
     const main = document.querySelector('main');
     const bgLayer = document.querySelector('.bg-layer');
@@ -52,18 +67,10 @@ async function navigateTo(url) {
             footer.remove();
         }
 
-        // Handle Overlay
-        const overlay = document.getElementById('post-overlay');
-        const newOverlay = doc.getElementById('post-overlay');
-        if (newOverlay) {
-            if (overlay) {
-                overlay.outerHTML = newOverlay.outerHTML;
-            } else {
-                document.body.insertBefore(newOverlay, document.querySelector('script'));
-            }
-        } else if (overlay) {
-            overlay.remove();
-        }
+        // Handle overlays and modal containers outside <main>
+        syncBodyElement('#post-overlay', doc);
+        syncBodyElement('.project-modal-overlay', doc);
+        activeProjectModal = null;
         
         // Update document title
         document.title = newTitle;
