@@ -37,7 +37,8 @@ function animateProjectsLoadIn() {
     }, 500);
 }
 
-async function navigateTo(url) {
+async function navigateTo(url, options = {}) {
+    const { updateHistory = true } = options;
     const main = document.querySelector('main');
     const bgLayer = document.querySelector('.bg-layer');
     const normalizedTarget = (url.split('/').pop() || 'index.html').toLowerCase();
@@ -108,7 +109,9 @@ async function navigateTo(url) {
         document.title = newTitle;
         
         // Update URL
-        history.pushState({}, newTitle, url);
+        if (updateHistory) {
+            history.pushState({}, newTitle, url);
+        }
         
         // 4. Re-initialize scripts
         if (url === 'blog.html' || url.includes('blog.html')) {
@@ -170,6 +173,9 @@ function shudderDisabledBlog(link) {
 }
 
 let blogHoverPopup = null;
+let popupFrameRequested = false;
+let popupX = 0;
+let popupY = 0;
 
 function ensureBlogHoverPopup() {
     if (blogHoverPopup && document.body.contains(blogHoverPopup)) return blogHoverPopup;
@@ -182,8 +188,21 @@ function ensureBlogHoverPopup() {
 
 function moveBlogHoverPopup(e) {
     if (!blogHoverPopup) return;
-    blogHoverPopup.style.left = `${e.clientX + 12}px`;
-    blogHoverPopup.style.top = `${e.clientY + 12}px`;
+    popupX = e.clientX + 12;
+    popupY = e.clientY + 12;
+
+    if (popupFrameRequested) return;
+    popupFrameRequested = true;
+
+    requestAnimationFrame(() => {
+        if (!blogHoverPopup) {
+            popupFrameRequested = false;
+            return;
+        }
+        blogHoverPopup.style.left = `${popupX}px`;
+        blogHoverPopup.style.top = `${popupY}px`;
+        popupFrameRequested = false;
+    });
 }
 
 function showBlogHoverPopup(e) {
@@ -267,7 +286,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const disabledBlogLink = e.target.closest('a[data-disabled-blog="true"]');
         if (!disabledBlogLink) return;
         showBlogHoverPopup(e);
-    });
+    }, { passive: true });
 
     document.body.addEventListener('mouseleave', (e) => {
         const disabledBlogLink = e.target.closest('a[data-disabled-blog="true"]');
@@ -281,7 +300,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    window.addEventListener('popstate', () => {
+    window.addEventListener('popstate', async () => {
+        const path = window.location.pathname.split('/').pop() || 'index.html';
+        if (path === 'index.html' || path === 'projects.html' || path === 'blog.html') {
+            await navigateTo(path, { updateHistory: false });
+            return;
+        }
         window.location.reload();
     });
 });
