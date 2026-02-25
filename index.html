@@ -81,6 +81,9 @@
                 <p>Ask about projects, certifications, and how I can help.</p>
             </div>
             <div class="chatbot-embed">
+                <div class="chatbot-status" id="chatbot-status" role="status" aria-live="polite">
+                    Loading chatbot…
+                </div>
                 <gradio-app src="https://lmansf96-portfolio-conversation.hf.space"></gradio-app>
             </div>
         </section>
@@ -115,7 +118,47 @@
         </div>
     </footer>
 
-    <script type="module" src="https://gradio.s3-us-west-2.amazonaws.com/5.49.1/gradio.js"></script>
+    <script id="gradio-loader" type="module" src="https://gradio.s3-us-west-2.amazonaws.com/5.49.1/gradio.js"></script>
+    <script>
+        (function () {
+            const statusEl = document.getElementById('chatbot-status');
+            const chatbotEl = document.querySelector('.chatbot-embed gradio-app');
+            const loaderEl = document.getElementById('gradio-loader');
+
+            if (!statusEl || !chatbotEl || !loaderEl) {
+                return;
+            }
+
+            const setStatus = (message) => {
+                statusEl.textContent = message;
+                statusEl.classList.remove('is-hidden');
+            };
+
+            const hideStatus = () => {
+                statusEl.classList.add('is-hidden');
+            };
+
+            loaderEl.addEventListener('error', function () {
+                setStatus('Chatbot failed to load. Please refresh and try again.');
+            });
+
+            loaderEl.addEventListener('load', function () {
+                const checkLoaded = window.setInterval(function () {
+                    if (chatbotEl.querySelector('iframe') || chatbotEl.childElementCount > 0) {
+                        hideStatus();
+                        window.clearInterval(checkLoaded);
+                    }
+                }, 500);
+
+                window.setTimeout(function () {
+                    if (!statusEl.classList.contains('is-hidden')) {
+                        setStatus('Chatbot is taking longer than expected. Please refresh the page.');
+                    }
+                    window.clearInterval(checkLoaded);
+                }, 12000);
+            });
+        })();
+    </script>
     <script defer src="assets/transition.min.js"></script>
 </body>
 </html>
