@@ -220,7 +220,7 @@ main {
     font-weight: 500;
     color: #f2fff9;
     line-height: 1.35;
-    text-transform: uppercase;
+    /* text-transform: uppercase; */
     letter-spacing: 0.2px;
 }
 
@@ -866,56 +866,42 @@ footer {
 
 /* Page Transitions */
 main, .bg-layer {
-    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    transition: opacity 0.5s ease-in-out;
 }
 
 .page-exit {
-    transform: translateX(-10%);
     opacity: 0;
 }
 
-.page-exit.home-direction {
-    transform: translateX(10%);
-}
-
 .page-enter {
-    animation: fadeInSlide 0.5s forwards;
-}
-
-.page-enter.home-direction {
-    animation: fadeInSlideReverse 0.5s ease-out forwards;
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
 .projects-load-enter {
-    animation: fadeInSlide 0.5s ease-out forwards;
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
-@keyframes fadeInSlide {
+@keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateX(10%);
     }
     to {
         opacity: 1;
-        transform: translateX(0);
     }
 }
 
-@keyframes fadeInSlideReverse {
-    from {
-        opacity: 0;
-        transform: translateX(-10%);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
+.page-initial-state {
+    opacity: 0;
+}
+
+.page-initial-enter {
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
 
 /* Ensure animations override transitions */
 .page-enter {
-    animation: fadeInSlide 0.5s ease-out forwards;
+    animation: fadeIn 0.5s ease-out forwards;
 }
 
 

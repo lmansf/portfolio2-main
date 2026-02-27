@@ -37,25 +37,62 @@ function animateProjectsLoadIn() {
     }, 500);
 }
 
+function normalizeInternalPath(url) {
+    const cleanedUrl = (url || '').split('#')[0].split('?')[0];
+    if (!cleanedUrl || cleanedUrl === '/' || cleanedUrl === './') return 'index.html';
+    return (cleanedUrl.split('/').pop() || 'index.html').toLowerCase();
+}
+
+function isTransitionPage(path) {
+    return ['index.html', 'projects.html', 'blog.html', 'resume.html', 'feedback.html'].includes(path);
+}
+
+function getManagedStylesheet(doc) {
+    return Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).find((link) => {
+        const href = (link.getAttribute('href') || '').toLowerCase();
+        return href.includes('assets/index.css') || href.includes('assets/style.css');
+    }) || null;
+}
+
+async function syncManagedStylesheet(incomingDoc) {
+    const incomingStylesheet = getManagedStylesheet(incomingDoc);
+    if (!incomingStylesheet) return;
+
+    const incomingHref = incomingStylesheet.getAttribute('href');
+    const currentStylesheet = getManagedStylesheet(document);
+
+    if (!incomingHref) return;
+
+    if (currentStylesheet) {
+        const currentHref = currentStylesheet.getAttribute('href');
+        if (currentHref === incomingHref) return;
+
+        await new Promise((resolve) => {
+            currentStylesheet.addEventListener('load', resolve, { once: true });
+            currentStylesheet.addEventListener('error', resolve, { once: true });
+            currentStylesheet.setAttribute('href', incomingHref);
+        });
+        return;
+    }
+
+    const newStylesheet = incomingStylesheet.cloneNode(true);
+    await new Promise((resolve) => {
+        newStylesheet.addEventListener('load', resolve, { once: true });
+        newStylesheet.addEventListener('error', resolve, { once: true });
+        document.head.appendChild(newStylesheet);
+    });
+}
+
 async function navigateTo(url, options = {}) {
     const { updateHistory = true } = options;
     const main = document.querySelector('main');
-    const bgLayer = document.querySelector('.bg-layer');
-    const normalizedTarget = (url.split('/').pop() || 'index.html').toLowerCase();
-    const isHomeDestination = normalizedTarget === 'index.html';
+    const normalizedTarget = normalizeInternalPath(url);
     const isProjectsDestination = normalizedTarget === 'projects.html';
-
-    if (isHomeDestination) {
-        main.classList.add('home-direction');
-        bgLayer.classList.add('home-direction');
-    }
+    const exitTargets = [main, document.querySelector('.bg-layer')].filter(Boolean);
     
-    // 1. Add slide-out class
-    main.classList.add('page-exit');
-    bgLayer.classList.add('page-exit');
-    
-    // Determine direction based on current page?
-    // For now, simple fade/slide out
+    exitTargets.forEach((element) => {
+        element.classList.add('page-exit');
+    });
     
     try {
         // 2. Fetch new content
@@ -63,13 +100,14 @@ async function navigateTo(url, options = {}) {
         const text = await response.text();
         const parser = new DOMParser();
         const doc = parser.parseFromString(text, 'text/html');
+
+        await syncManagedStylesheet(doc);
         
         // Wait for exit animation
         await new Promise(resolve => setTimeout(resolve, 500)); // Match CSS transition duration
         
         // 3. Swap Content
         const newMain = doc.querySelector('main');
-        const newBgLayer = doc.querySelector('.bg-layer');
         const newTitle = doc.querySelector('title').innerText;
         const newHeader = doc.querySelector('header');
         
@@ -78,9 +116,7 @@ async function navigateTo(url, options = {}) {
             main.className = newMain.className; // Update class (e.g. blog-view)
         }
         
-        if (bgLayer && newBgLayer) {
-            bgLayer.innerHTML = newBgLayer.innerHTML;
-        }
+        syncBodyElement('.bg-layer', doc);
 
         if (newHeader) {
             const header = document.querySelector('header');
@@ -121,27 +157,24 @@ async function navigateTo(url, options = {}) {
         }
         
         // 5. Enter animation
-        main.classList.remove('page-exit');
-        bgLayer.classList.remove('page-exit');
-        
-        main.classList.add('page-enter');
-        bgLayer.classList.add('page-enter');
+        const enterTargets = [main, document.querySelector('.bg-layer')].filter(Boolean);
+        enterTargets.forEach((element) => {
+            element.classList.remove('page-exit');
+            element.classList.add('page-enter');
+        });
 
         if (isProjectsDestination) {
             animateProjectsLoadIn();
         }
         
         setTimeout(() => {
-            main.classList.remove('page-enter');
-            bgLayer.classList.remove('page-enter');
-            main.classList.remove('home-direction');
-            bgLayer.classList.remove('home-direction');
+            enterTargets.forEach((element) => {
+                element.classList.remove('page-enter');
+            });
         }, 500);
         
     } catch (err) {
         console.error('Navigation failed:', err);
-        main.classList.remove('home-direction');
-        bgLayer.classList.remove('home-direction');
         window.location.href = url; // Fallback
     }
 }
@@ -227,6 +260,23 @@ document.addEventListener('DOMContentLoaded', () => {
         animateProjectsLoadIn();
     }
 
+    const initialTargets = [document.querySelector('main'), document.querySelector('.bg-layer')].filter(Boolean);
+    initialTargets.forEach((element) => {
+        element.classList.add('page-initial-state');
+    });
+    requestAnimationFrame(() => {
+        initialTargets.forEach((element) => {
+            element.classList.add('page-initial-enter');
+            element.classList.remove('page-initial-state');
+        });
+
+        setTimeout(() => {
+            initialTargets.forEach((element) => {
+                element.classList.remove('page-initial-enter');
+            });
+        }, 500);
+    });
+
     document.body.addEventListener('click', (e) => {
         const disabledBlogLink = e.target.closest('a[data-disabled-blog="true"]');
         if (disabledBlogLink) {
@@ -261,16 +311,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const href = link.getAttribute('href');
         // Check if internal link
         if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('mailto:') || link.target === '_blank' || href.endsWith('.pdf')) return;
-        
-        // Normalize paths if needed, but simple check works for this structure
-        const currentPath = window.location.pathname.split('/').pop() || 'index.html';
-        
-        if (href === currentPath) {
+
+        const normalizedHref = normalizeInternalPath(href);
+        const currentPath = normalizeInternalPath(window.location.pathname);
+
+        if (normalizedHref === currentPath) {
             e.preventDefault(); // Do nothing if same page
             return;
         }
 
-        if (href === 'index.html' || href === 'blog.html' || href === 'projects.html') {
+        if (isTransitionPage(normalizedHref)) {
             e.preventDefault();
             navigateTo(href);
         }
@@ -301,8 +351,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     window.addEventListener('popstate', async () => {
-        const path = window.location.pathname.split('/').pop() || 'index.html';
-        if (path === 'index.html' || path === 'projects.html' || path === 'blog.html') {
+        const path = normalizeInternalPath(window.location.pathname);
+        if (isTransitionPage(path)) {
             await navigateTo(path, { updateHistory: false });
             return;
         }
