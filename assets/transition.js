@@ -47,6 +47,12 @@ function isTransitionPage(path) {
     return ['index.html', 'projects.html', 'blog.html', 'resume.html', 'feedback.html'].includes(path);
 }
 
+function isAtsResumeLink(link) {
+    if (!link) return false;
+    const href = (link.getAttribute('href') || '').toLowerCase();
+    return href.endsWith('assets/resume_ats.txt') || href.endsWith('/assets/resume_ats.txt');
+}
+
 function getManagedStylesheet(doc) {
     return Array.from(doc.querySelectorAll('link[rel="stylesheet"]')).find((link) => {
         const href = (link.getAttribute('href') || '').toLowerCase();
@@ -121,6 +127,7 @@ async function navigateTo(url, options = {}) {
         if (newHeader) {
             const header = document.querySelector('header');
             if (header) header.innerHTML = newHeader.innerHTML;
+            closeMobileNav();
         }
 
         // Handle Footer
@@ -249,6 +256,23 @@ function hideBlogHoverPopup() {
     blogHoverPopup.classList.remove('is-visible');
 }
 
+function setMobileNavExpanded(isExpanded) {
+    const navToggle = document.querySelector('[data-nav-toggle]');
+    if (!navToggle) return;
+    navToggle.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+}
+
+function closeMobileNav() {
+    document.body.classList.remove('mobile-nav-open');
+    setMobileNavExpanded(false);
+}
+
+function toggleMobileNav() {
+    const shouldOpen = !document.body.classList.contains('mobile-nav-open');
+    document.body.classList.toggle('mobile-nav-open', shouldOpen);
+    setMobileNavExpanded(shouldOpen);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // Check for file protocol
     if (window.location.protocol === 'file:') {
@@ -277,7 +301,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 500);
     });
 
+    closeMobileNav();
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth > 900) {
+            closeMobileNav();
+        }
+    });
+
     document.body.addEventListener('click', (e) => {
+        const navToggle = e.target.closest('[data-nav-toggle]');
+        if (navToggle) {
+            e.preventDefault();
+            toggleMobileNav();
+            return;
+        }
+
+        if (document.body.classList.contains('mobile-nav-open') && !e.target.closest('header')) {
+            closeMobileNav();
+        }
+
         const disabledBlogLink = e.target.closest('a[data-disabled-blog="true"]');
         if (disabledBlogLink) {
             e.preventDefault();
@@ -307,10 +350,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const link = e.target.closest('a');
         if (!link) return;
+
+        if (isAtsResumeLink(link)) {
+            const shouldLeave = window.confirm('You are leaving the portfolio site to open the ATS Resume. Select OK to continue or Cancel to stay on the portfolio.');
+            if (!shouldLeave) {
+                e.preventDefault();
+            }
+            closeMobileNav();
+            return;
+        }
         
         const href = link.getAttribute('href');
         // Check if internal link
         if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('mailto:') || link.target === '_blank' || href.endsWith('.pdf')) return;
+
+        closeMobileNav();
 
         const normalizedHref = normalizeInternalPath(href);
         const currentPath = normalizeInternalPath(window.location.pathname);
@@ -345,6 +399,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }, true);
 
     document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && document.body.classList.contains('mobile-nav-open')) {
+            closeMobileNav();
+        }
+
         if (e.key === 'Escape' && activeProjectModal) {
             closeProjectModal(activeProjectModal);
         }
