@@ -382,6 +382,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const normalizedHref = normalizeInternalPath(href);
         const currentPath = normalizeInternalPath(window.location.pathname);
 
+        if (normalizedHref === 'index.html' && currentPath !== 'index.html') {
+            e.preventDefault();
+            window.location.href = 'index.html';
+            return;
+        }
+
         if (normalizedHref === currentPath) {
             e.preventDefault(); // Do nothing if same page
             return;
