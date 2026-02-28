@@ -5,6 +5,18 @@ const SALES_TAX_RATE = 0.07;
 const SERVICE_FEE = 2.49;
 let supabaseClient;
 
+function getSupabaseClient() {
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+        throw new Error('Supabase client is unavailable on this page.');
+    }
+
+    if (!supabaseClient) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+
+    return supabaseClient;
+}
+
 const shopState = {
     products: [],
     cart: new Map(),
@@ -457,11 +469,54 @@ function resetCheckoutForm(form) {
     form.reset();
 }
 
-function applyOrderInventoryReduction() {
-    getCartEntries().forEach(({ product, quantity }) => {
-        const currentLimit = getInventoryLimit(product);
-        setInventoryLimit(product, currentLimit - quantity);
-    });
+async function applyOrderInventoryReduction() {
+    const client = getSupabaseClient();
+    const cartEntries = getCartEntries();
+
+    for (const { product, quantity } of cartEntries) {
+        const { data: currentRow, error: readError } = await client
+            .from(SHOP_PRODUCTS_TABLE)
+            .select('id, stock')
+            .eq('id', product.id)
+            .maybeSingle();
+
+        if (readError) {
+            throw new Error(`Could not verify stock for ${product.name}: ${readError.message}`);
+        }
+
+        if (!currentRow) {
+            throw new Error(`Product ${product.name} is no longer available.`);
+        }
+
+        const currentStock = Number(currentRow.stock);
+        if (!Number.isFinite(currentStock)) {
+            throw new Error(`Product ${product.name} has invalid stock data.`);
+        }
+
+        if (currentStock < quantity) {
+            throw new Error(`Not enough stock for ${product.name}. Available: ${Math.max(0, Math.floor(currentStock))}.`);
+        }
+
+        const nextStock = Math.max(0, Math.floor(currentStock - quantity));
+        const { data: updatedRow, error: updateError } = await client
+            .from(SHOP_PRODUCTS_TABLE)
+            .update({ stock: nextStock })
+            .eq('id', product.id)
+            .eq('stock', currentStock)
+            .select('id, stock')
+            .maybeSingle();
+
+        if (updateError) {
+            throw new Error(`Could not update stock for ${product.name}: ${updateError.message}`);
+        }
+
+        if (!updatedRow) {
+            throw new Error(`Stock changed for ${product.name} while checking out. Please try again.`);
+        }
+
+        product.stock = nextStock;
+        product.capacity = nextStock;
+    }
 }
 
 function startNewOrder() {
@@ -498,7 +553,7 @@ function attachCheckoutHandler() {
         startNewOrderButton.addEventListener('click', startNewOrder);
     }
 
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
         event.preventDefault();
 
         if (shopState.isCheckoutComplete) {
@@ -517,8 +572,28 @@ function attachCheckoutHandler() {
             return;
         }
 
+        const placeOrderButton = document.getElementById('shop-place-order');
+        if (placeOrderButton) {
+            placeOrderButton.disabled = true;
+            placeOrderButton.dataset.pending = 'true';
+        }
+
+        setFormMessage('Processing order...', 'neutral');
+
+        try {
+            await applyOrderInventoryReduction();
+        } catch (inventoryError) {
+            console.error(inventoryError);
+            setFormMessage(inventoryError.message || 'Could not complete checkout due to a stock update issue.', 'error');
+            renderCart();
+            return;
+        } finally {
+            if (placeOrderButton) {
+                delete placeOrderButton.dataset.pending;
+            }
+        }
+
         shopState.isCheckoutComplete = true;
-        applyOrderInventoryReduction();
         shopState.cart.clear();
         shopState.ticketDates.clear();
         setCheckoutInputsDisabled(true);
@@ -529,15 +604,9 @@ function attachCheckoutHandler() {
 }
 
 async function loadProducts() {
-    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
-        throw new Error('Supabase client is unavailable on this page.');
-    }
+    const client = getSupabaseClient();
 
-    if (!supabaseClient) {
-        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    }
-
-    const { data, error } = await supabaseClient
+    const { data, error } = await client
         .from(SHOP_PRODUCTS_TABLE)
         .select('id, product_name, category, description, unit_price, stock')
         .order('product_name', { ascending: true });

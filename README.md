@@ -25,6 +25,63 @@ The site currently reads Supabase data directly in the browser using the public 
    - `stock` (required; used for both product stock and ticket capacity)
 
 RLS policies should allow read access only to intended public product rows/columns.
+Checkout also updates `public.products.stock` after successful orders, so an appropriate `UPDATE` RLS policy is required for the rows you allow to be purchased.
+
+### Supabase SQL (RLS + Stock Update)
+
+Run this in Supabase SQL Editor for the current frontend anon-key model:
+
+```sql
+-- 1) Ensure RLS is enabled
+alter table public.products enable row level security;
+
+-- 2) Allow catalog reads for anon users
+drop policy if exists "products_select_anon" on public.products;
+create policy "products_select_anon"
+on public.products
+for select
+to anon
+using (true);
+
+-- 3) Allow anon updates on purchasable rows
+-- Adjust USING/WITH CHECK if you want to restrict by a boolean like is_active = true
+drop policy if exists "products_update_stock_anon" on public.products;
+create policy "products_update_stock_anon"
+on public.products
+for update
+to anon
+using (true)
+with check (stock >= 0);
+
+-- 4) Restrict anon updates to stock column only
+grant usage on schema public to anon;
+grant select on public.products to anon;
+grant update (stock) on public.products to anon;
+
+-- 5) Hardening: prevent anon from increasing stock
+create or replace function public.enforce_stock_decrease_only()
+returns trigger
+language plpgsql
+as $$
+begin
+   if new.stock > old.stock then
+      raise exception 'stock can only decrease from client checkout';
+   end if;
+
+   if new.stock < 0 then
+      raise exception 'stock cannot be negative';
+   end if;
+
+   return new;
+end;
+$$;
+
+drop trigger if exists trg_products_enforce_stock_decrease_only on public.products;
+create trigger trg_products_enforce_stock_decrease_only
+before update of stock on public.products
+for each row
+execute function public.enforce_stock_decrease_only();
+```
 
 ## Layout and File Structure
 
