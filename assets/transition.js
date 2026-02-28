@@ -214,17 +214,51 @@ function closeProjectModal(modal) {
 }
 
 const BLOG_UNLOCK_KEY = 'portfolio_blog_unlocked';
+const BLOG_UNLOCK_LEGACY_KEY = 'portfolio_blog_unlocked';
 let interactiveSnakeHandle = null;
 let isSnakeDragging = false;
 let snakePointerOffsetX = 0;
 let snakePointerOffsetY = 0;
 
+function getStorageValue(key) {
+    try {
+        return sessionStorage.getItem(key);
+    } catch {
+        return null;
+    }
+}
+
+function setStorageValue(key, value) {
+    try {
+        sessionStorage.setItem(key, value);
+    } catch {
+        // no-op when storage is unavailable
+    }
+}
+
+function removeLegacyUnlockState() {
+    try {
+        localStorage.removeItem(BLOG_UNLOCK_LEGACY_KEY);
+    } catch {
+        // no-op when storage is unavailable
+    }
+}
+
+function getLockedBlogLinkFromEventTarget(target) {
+    if (!target || !(target instanceof Element)) return null;
+    const link = target.closest('a[href]');
+    if (!link) return null;
+    const isBlogTarget = normalizeInternalPath(link.getAttribute('href') || '') === 'blog.html' || link.textContent.trim().toLowerCase() === 'blog';
+    if (!isBlogTarget) return null;
+    return isBlogUnlocked() ? null : link;
+}
+
 function isBlogUnlocked() {
-    return localStorage.getItem(BLOG_UNLOCK_KEY) === 'true';
+    return getStorageValue(BLOG_UNLOCK_KEY) === 'true';
 }
 
 function setBlogUnlocked(unlocked) {
-    localStorage.setItem(BLOG_UNLOCK_KEY, unlocked ? 'true' : 'false');
+    setStorageValue(BLOG_UNLOCK_KEY, unlocked ? 'true' : 'false');
 }
 
 function applyBlogUnlockState(root = document) {
@@ -447,6 +481,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     closeMobileNav();
+    setBlogUnlocked(false);
+    removeLegacyUnlockState();
     applyBlogUnlockState();
     setupInteractiveSnake();
 
@@ -468,7 +504,7 @@ document.addEventListener('DOMContentLoaded', () => {
             closeMobileNav();
         }
 
-        const disabledBlogLink = e.target.closest('a[data-disabled-blog="true"]');
+        const disabledBlogLink = getLockedBlogLinkFromEventTarget(e.target);
         if (disabledBlogLink) {
             e.preventDefault();
             hideBlogHoverPopup();
@@ -542,19 +578,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     document.body.addEventListener('mouseenter', (e) => {
-        const disabledBlogLink = e.target.closest('a[data-disabled-blog="true"]');
+        const disabledBlogLink = getLockedBlogLinkFromEventTarget(e.target);
         if (!disabledBlogLink) return;
         showBlogHoverPopup(e);
     }, true);
 
     document.body.addEventListener('mousemove', (e) => {
-        const disabledBlogLink = e.target.closest('a[data-disabled-blog="true"]');
+        const disabledBlogLink = getLockedBlogLinkFromEventTarget(e.target);
         if (!disabledBlogLink) return;
         showBlogHoverPopup(e);
     }, { passive: true });
 
     document.body.addEventListener('mouseleave', (e) => {
-        const disabledBlogLink = e.target.closest('a[data-disabled-blog="true"]');
+        const disabledBlogLink = getLockedBlogLinkFromEventTarget(e.target);
         if (!disabledBlogLink) return;
         hideBlogHoverPopup();
     }, true);

@@ -1,10 +1,10 @@
 :root {
     --bg-color: #1e1e1e;
-    --text-color: #e9fff5;
-    --accent-color: #99ffcc;
-    --secondary-text: #93c7ae;
-    --card-bg: rgba(153, 255, 204, 0.06);
-    --card-border: rgba(153, 255, 204, 0.22);
+    --text-color: #fff8e6;
+    --accent-color: #ffd27a;
+    --secondary-text: #ceb787;
+    --card-bg: rgba(255, 210, 122, 0.06);
+    --card-border: rgba(255, 210, 122, 0.22);
     --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
@@ -39,15 +39,15 @@ body::after {
 
 body::before {
     background-image:
-        repeating-linear-gradient(112deg, transparent 0 18px, rgba(153, 255, 204, 0.14) 18px 19px, transparent 19px 42px),
-        repeating-linear-gradient(158deg, transparent 0 34px, rgba(153, 255, 204, 0.1) 34px 37px, transparent 37px 76px);
+        repeating-linear-gradient(112deg, transparent 0 18px, rgba(255, 210, 122, 0.14) 18px 19px, transparent 19px 42px),
+        repeating-linear-gradient(158deg, transparent 0 34px, rgba(255, 210, 122, 0.1) 34px 37px, transparent 37px 76px);
     opacity: 0.38;
 }
 
 body::after {
     background-image:
-        repeating-linear-gradient(38deg, transparent 0 22px, rgba(153, 255, 204, 0.12) 22px 24px, transparent 24px 58px),
-        repeating-linear-gradient(136deg, transparent 0 48px, rgba(153, 255, 204, 0.08) 48px 54px, transparent 54px 98px);
+        repeating-linear-gradient(38deg, transparent 0 22px, rgba(255, 210, 122, 0.12) 22px 24px, transparent 24px 58px),
+        repeating-linear-gradient(136deg, transparent 0 48px, rgba(255, 210, 122, 0.08) 48px 54px, transparent 54px 98px);
     opacity: 0.24;
 }
 
@@ -76,7 +76,7 @@ header {
     width: 42px;
     height: 42px;
     border: 1px solid var(--card-border);
-    background: rgba(153, 255, 204, 0.08);
+    background: rgba(255, 210, 122, 0.08);
     align-items: center;
     justify-content: center;
     flex-direction: column;
@@ -99,7 +99,7 @@ header {
 .nav-links a:hover,
 .nav-links a.active {
     color: var(--text-color);
-    text-shadow: 0 0 10px rgba(153, 255, 204, 0.25);
+    text-shadow: 0 0 10px rgba(255, 210, 122, 0.25);
 }
 
 .nav-links a:focus-visible {
@@ -210,7 +210,7 @@ main {
 .bar {
     width: 2px;
     height: 12px;
-    background-color: #3f7a62;
+    background-color: #7b6640;
 }
 
 .bar.a { height: 8px; }
@@ -220,7 +220,7 @@ main {
 .status-text {
     font-size: 0.8rem;
     font-weight: 500;
-    color: #f2fff9;
+    color: #fff7e3;
     line-height: 1.35;
     /* text-transform: uppercase; */
     letter-spacing: 0.2px;
@@ -268,14 +268,14 @@ main {
 }
 
 .consult-btn:hover {
-    background: #adffd8;
-    box-shadow: 0 0 0 2px rgba(153, 255, 204, 0.28);
+    background: #e8bd6a;
+    box-shadow: 0 0 0 2px rgba(255, 210, 122, 0.28);
 }
 
 .consult-btn:focus-visible {
     outline: 2px solid var(--accent-color);
     outline-offset: 3px;
-    box-shadow: 0 0 0 3px rgba(153, 255, 204, 0.2);
+    box-shadow: 0 0 0 3px rgba(255, 210, 122, 0.2);
 }
 
 .intro-text {
@@ -290,7 +290,7 @@ main {
 .intro-text p {
     font-size: 1.1rem;
     line-height: 1.4;
-    color: #d2fce7;
+    color: #f0ddb3;
 }
 
 .chatbot-panel {
@@ -373,7 +373,7 @@ footer {
 .marquee-content span {
     font-size: 1.5rem;
     font-weight: 700;
-    color: #93c7ae;
+    color: #ceb787;
     text-transform: uppercase;
     white-space: nowrap;
     display: inline-block;
@@ -392,7 +392,7 @@ footer {
 
 .separator {
     margin: 0 1.5rem;
-    color: #2f5a49;
+    color: #5a4a2b;
 }
 
 @keyframes scroll {
@@ -421,7 +421,7 @@ footer {
 
 .footer-socials a:hover {
     color: var(--accent-color);
-    text-shadow: 0 0 10px rgba(153, 255, 204, 0.28);
+    text-shadow: 0 0 10px rgba(255, 210, 122, 0.28);
 }
 
 .footer-socials a:focus-visible {
@@ -467,8 +467,8 @@ body::after {
 
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-track { background: #1e1e1e; }
-::-webkit-scrollbar-thumb { background: #2f5a49; border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: #3f7a62; }
+::-webkit-scrollbar-thumb { background: #5a4a2b; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #7b6640; }
 
 @media (max-width: 900px) {
     header {
