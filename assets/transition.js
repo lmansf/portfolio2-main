@@ -253,10 +253,111 @@ function closeProjectModal(modal) {
 
 const BLOG_UNLOCK_KEY = 'portfolio_blog_unlocked';
 const BLOG_UNLOCK_LEGACY_KEY = 'portfolio_blog_unlocked';
+const SHOP_PRODUCTS_CACHE_KEY = 'portfolio_shop_products_cache_v1';
+const SHOP_PRODUCTS_CACHE_TIME_KEY = 'portfolio_shop_products_cache_time_v1';
+const SHOP_PRODUCTS_CACHE_TTL_MS = 5 * 60 * 1000;
+const SHOP_PREFETCH_TIMEOUT_MS = 6000;
+const SHOP_SUPABASE_URL = 'https://xcubnwvyvhjfyiixunfg.supabase.co';
+const SHOP_SUPABASE_ANON_KEY = 'sb_publishable_K5k9vLXtDUo8qoyWrwX3qg_qN_3xWfy';
+const SHOP_REST_PRODUCTS_URL = `${SHOP_SUPABASE_URL}/rest/v1/products?select=id,product_name,category,description,unit_price,stock&order=unit_price.asc,product_name.asc`;
+let shopProductsPrefetchPromise = null;
 let interactiveSnakeHandle = null;
 let isSnakeDragging = false;
 let snakePointerOffsetX = 0;
 let snakePointerOffsetY = 0;
+
+function getShopProductsCacheAgeMs() {
+    try {
+        const rawTimestamp = Number(sessionStorage.getItem(SHOP_PRODUCTS_CACHE_TIME_KEY));
+        if (!Number.isFinite(rawTimestamp) || rawTimestamp <= 0) return Infinity;
+        return Date.now() - rawTimestamp;
+    } catch {
+        return Infinity;
+    }
+}
+
+function hasFreshShopProductsCache() {
+    return getShopProductsCacheAgeMs() <= SHOP_PRODUCTS_CACHE_TTL_MS;
+}
+
+async function prefetchShopProductsIfNeeded() {
+    if (normalizeInternalPath(window.location.pathname) === 'shop.html') {
+        return;
+    }
+
+    if (hasFreshShopProductsCache()) {
+        return;
+    }
+
+    if (shopProductsPrefetchPromise) {
+        return shopProductsPrefetchPromise;
+    }
+
+    shopProductsPrefetchPromise = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), SHOP_PREFETCH_TIMEOUT_MS);
+
+        try {
+            const response = await fetch(SHOP_REST_PRODUCTS_URL, {
+                method: 'GET',
+                headers: {
+                    apikey: SHOP_SUPABASE_ANON_KEY,
+                    Authorization: `Bearer ${SHOP_SUPABASE_ANON_KEY}`
+                },
+                signal: controller.signal
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const products = await response.json();
+            if (!Array.isArray(products)) {
+                return;
+            }
+
+            sessionStorage.setItem(SHOP_PRODUCTS_CACHE_KEY, JSON.stringify(products));
+            sessionStorage.setItem(SHOP_PRODUCTS_CACHE_TIME_KEY, String(Date.now()));
+        } catch {
+            // ignore prefetch failures and continue normal behavior
+        } finally {
+            clearTimeout(timeoutId);
+            shopProductsPrefetchPromise = null;
+        }
+    })();
+
+    return shopProductsPrefetchPromise;
+}
+
+function requestShopPrefetch() {
+    void prefetchShopProductsIfNeeded();
+}
+
+function scheduleShopProductsPrefetch() {
+    if (normalizeInternalPath(window.location.pathname) === 'shop.html') return;
+
+    if (typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => {
+            requestShopPrefetch();
+        }, { timeout: 2500 });
+        return;
+    }
+
+    setTimeout(() => {
+        requestShopPrefetch();
+    }, 1000);
+}
+
+function wireShopPrefetchInteractions() {
+    const navLinks = Array.from(document.querySelectorAll('header .nav-links a[href]'));
+    const shopLinks = navLinks.filter((link) => normalizeInternalPath(link.getAttribute('href') || '') === 'shop.html');
+
+    shopLinks.forEach((link) => {
+        link.addEventListener('mouseenter', requestShopPrefetch, { passive: true });
+        link.addEventListener('focus', requestShopPrefetch, { passive: true });
+        link.addEventListener('touchstart', requestShopPrefetch, { passive: true });
+    });
+}
 
 function getStorageValue(key) {
     try {
@@ -523,6 +624,8 @@ document.addEventListener('DOMContentLoaded', () => {
     removeLegacyUnlockState();
     applyBlogUnlockState();
     setupInteractiveSnake();
+    wireShopPrefetchInteractions();
+    scheduleShopProductsPrefetch();
 
     window.addEventListener('resize', () => {
         if (window.innerWidth > 900) {

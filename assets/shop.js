@@ -3,6 +3,9 @@ const SUPABASE_ANON_KEY = 'sb_publishable_K5k9vLXtDUo8qoyWrwX3qg_qN_3xWfy';
 const SHOP_PRODUCTS_TABLE = 'products';
 const TRANSACTIONS_TABLE = 'transactions';
 const PROMOTIONS_TABLE = 'promotions';
+const SHOP_PRODUCTS_CACHE_KEY = 'portfolio_shop_products_cache_v1';
+const SHOP_PRODUCTS_CACHE_TIME_KEY = 'portfolio_shop_products_cache_time_v1';
+const SHOP_PRODUCTS_CACHE_TTL_MS = 5 * 60 * 1000;
 const SALES_TAX_RATE = 0.07;
 const SERVICE_FEE = 2.49;
 let supabaseClient;
@@ -979,7 +982,13 @@ async function loadProducts() {
         throw new Error('Supabase products response was not an array.');
     }
 
-    return data
+    return mapProductsResponseRows(data);
+}
+
+function mapProductsResponseRows(rows) {
+    if (!Array.isArray(rows)) return [];
+
+    return rows
         .map((row) => {
             const id = String(row.id || '').trim();
             const name = String(row.product_name || '').trim();
@@ -1013,6 +1022,43 @@ async function loadProducts() {
         .filter(Boolean);
 }
 
+function readCachedProducts() {
+    try {
+        const rawTimestamp = Number(sessionStorage.getItem(SHOP_PRODUCTS_CACHE_TIME_KEY));
+        if (!Number.isFinite(rawTimestamp) || rawTimestamp <= 0) return [];
+
+        if (Date.now() - rawTimestamp > SHOP_PRODUCTS_CACHE_TTL_MS) {
+            return [];
+        }
+
+        const rawProducts = sessionStorage.getItem(SHOP_PRODUCTS_CACHE_KEY);
+        if (!rawProducts) return [];
+
+        const parsedRows = JSON.parse(rawProducts);
+        return mapProductsResponseRows(parsedRows);
+    } catch {
+        return [];
+    }
+}
+
+function writeCachedProducts(products) {
+    try {
+        const rowsForCache = products.map((product) => ({
+            id: product.id,
+            product_name: product.name,
+            category: product.category,
+            description: product.description,
+            unit_price: product.price,
+            stock: product.stock
+        }));
+
+        sessionStorage.setItem(SHOP_PRODUCTS_CACHE_KEY, JSON.stringify(rowsForCache));
+        sessionStorage.setItem(SHOP_PRODUCTS_CACHE_TIME_KEY, String(Date.now()));
+    } catch {
+        // no-op when storage is unavailable
+    }
+}
+
 function setProductsLoadError() {
     const productGrid = document.getElementById('shop-product-grid');
     if (productGrid) {
@@ -1034,16 +1080,33 @@ async function initializeShopPage() {
     setCheckoutInputsDisabled(false);
     updateCheckoutActionState();
 
-    productGrid.innerHTML = '<p class="shop-products-empty">Loading products...</p>';
+    const cachedProducts = readCachedProducts();
+    if (cachedProducts.length) {
+        shopState.products = cachedProducts;
+        renderProducts();
+        setFormMessage('Products loaded. Add items to your cart to begin checkout.');
+    } else {
+        productGrid.innerHTML = '<p class="shop-products-empty">Loading products...</p>';
+    }
+    attachCheckoutHandler();
+    renderCart();
 
     try {
-        shopState.products = await loadProducts();
+        const loadedProducts = await loadProducts();
+        shopState.products = loadedProducts;
+        writeCachedProducts(loadedProducts);
         renderProducts();
         renderCart();
-        attachCheckoutHandler();
         setFormMessage('Add items to your cart to begin checkout.');
     } catch (error) {
         console.error(error);
+        if (shopState.products.length) {
+            renderProducts();
+            renderCart();
+            setFormMessage('Using cached products. Live updates are temporarily unavailable.', 'warning');
+            return;
+        }
+
         shopState.products = [];
         shopState.cart.clear();
         shopState.ticketDates.clear();
