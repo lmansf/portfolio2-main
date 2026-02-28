@@ -763,6 +763,12 @@ footer {
     flex: 1;
 }
 
+.shop-product-inventory,
+.shop-item-availability {
+    color: var(--secondary-text);
+    font-size: 0.82rem;
+}
+
 .shop-product-footer {
     display: flex;
     align-items: center;
@@ -782,6 +788,11 @@ footer {
 .shop-add-btn:hover,
 .shop-remove-btn:hover {
     border-color: rgba(255, 210, 122, 0.5);
+}
+
+.shop-add-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .shop-cart-summary {
@@ -809,6 +820,21 @@ footer {
     color: var(--secondary-text);
     font-size: 0.85rem;
     margin-top: 4px;
+}
+
+.shop-ticket-date-label {
+    display: grid;
+    gap: 6px;
+    margin-top: 10px;
+    color: var(--secondary-text);
+    font-size: 0.8rem;
+}
+
+.shop-ticket-date-input {
+    border: 1px solid var(--card-border);
+    background: rgba(30, 30, 30, 0.92);
+    color: var(--text-color);
+    padding: 8px;
 }
 
 .shop-cart-controls {
