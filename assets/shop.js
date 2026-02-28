@@ -1,4 +1,62 @@
 const SHOP_PRODUCT_SOURCE = 'assets/data/products.json';
+const SHOP_FALLBACK_PRODUCTS = [
+    {
+        id: 'owl-adoption-plush',
+        name: 'Adopt-an-Owl Plush',
+        description: 'Soft rescue owl plush with a name tag from the nocturnal aviary.',
+        price: 24.95,
+        category: 'Gift Shop'
+    },
+    {
+        id: 'moonlight-owl-tour',
+        name: 'Moonlight Owl Walk Ticket',
+        description: 'After-hours guided tour through the owl habitat and rehab observation deck.',
+        price: 42.0,
+        category: 'Experience'
+    },
+    {
+        id: 'keeper-for-day-pass',
+        name: 'Junior Keeper Pass',
+        description: 'Hands-on educational session assisting keepers with owl enrichment setup.',
+        price: 79.0,
+        category: 'Education'
+    },
+    {
+        id: 'owl-cafe-combo',
+        name: 'Owl Cafe Snack Bundle',
+        description: 'Facility cafe combo with hot cocoa, themed pastry, and souvenir cup.',
+        price: 18.5,
+        category: 'Cafe'
+    },
+    {
+        id: 'night-vision-binocular-rental',
+        name: 'Night Vision Binocular Rental',
+        description: 'Two-hour rental for dusk feeding demos and owl flight observation.',
+        price: 16.0,
+        category: 'Rental'
+    },
+    {
+        id: 'owl-habitat-donation',
+        name: 'Habitat Restoration Donation',
+        description: 'Contribute directly to enclosure upgrades and medical care supplies.',
+        price: 25.0,
+        category: 'Support'
+    },
+    {
+        id: 'owl-feather-journal',
+        name: 'Field Notes Journal',
+        description: 'Recycled paper journal inspired by owl tracking logs used by staff.',
+        price: 14.75,
+        category: 'Gift Shop'
+    },
+    {
+        id: 'kids-owl-workshop',
+        name: 'Kids Owl Discovery Workshop',
+        description: 'Weekend workshop with interactive stations, pellets lab, and storytelling.',
+        price: 29.0,
+        category: 'Education'
+    }
+];
 
 const shopState = {
     products: [],
@@ -310,17 +368,22 @@ function attachCheckoutHandler() {
 }
 
 async function loadProducts() {
-    const response = await fetch(SHOP_PRODUCT_SOURCE, { cache: 'no-store' });
-    if (!response.ok) {
-        throw new Error(`Failed to load catalog (${response.status})`);
-    }
+    try {
+        const response = await fetch(SHOP_PRODUCT_SOURCE, { cache: 'no-store' });
+        if (!response.ok) {
+            throw new Error(`Failed to load catalog (${response.status})`);
+        }
 
-    const products = await response.json();
-    if (!Array.isArray(products)) {
-        throw new Error('Invalid product catalog format.');
-    }
+        const products = await response.json();
+        if (!Array.isArray(products)) {
+            throw new Error('Invalid product catalog format.');
+        }
 
-    return products;
+        return products;
+    } catch (error) {
+        console.warn('Using fallback product catalog because JSON fetch failed.', error);
+        return SHOP_FALLBACK_PRODUCTS;
+    }
 }
 
 async function initializeShopPage() {
