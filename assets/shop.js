@@ -62,6 +62,10 @@ function toNonNegativeNumber(value) {
     return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : 0;
 }
 
+function escapeLikePattern(value) {
+    return String(value || '').replace(/[\\%_]/g, (character) => `\\${character}`);
+}
+
 function getPromotionMessageElement() {
     return document.getElementById('shop-promo-message');
 }
@@ -144,12 +148,22 @@ function getPromotionDiscountAmount(preDiscountTotal) {
 }
 
 async function loadPromotionByCode(promotionCode) {
+    const normalizedCode = normalizePromotionCode(promotionCode);
+    if (!normalizedCode) {
+        return null;
+    }
+
+    const todayIso = getTodayIsoDate();
+    const wildcardPattern = `%${escapeLikePattern(normalizedCode)}%`;
     const client = getSupabaseClient();
     const { data, error } = await client
         .from(PROMOTIONS_TABLE)
         .select('promotion_code, start_date, end_date, flat_amount, percent_amount')
-        .ilike('promotion_code', promotionCode)
-        .limit(1);
+        .ilike('promotion_code', wildcardPattern)
+        .lte('start_date', todayIso)
+        .gte('end_date', todayIso)
+        .order('start_date', { ascending: false })
+        .limit(25);
 
     if (error) {
         throw new Error(`Failed to validate promotion code: ${error.message}`);
@@ -159,7 +173,17 @@ async function loadPromotionByCode(promotionCode) {
         return null;
     }
 
-    const promotion = data[0];
+    const promotion = data.find((row) => {
+        const rowCode = normalizePromotionCode(row.promotion_code);
+        const hasExactCodeMatch = rowCode === normalizedCode;
+        const hasValidDateRange = isPromotionDateRangeValid(row.start_date, row.end_date);
+        return hasExactCodeMatch && hasValidDateRange;
+    });
+
+    if (!promotion) {
+        return null;
+    }
+
     return {
         code: normalizePromotionCode(promotion.promotion_code),
         startDate: promotion.start_date,
