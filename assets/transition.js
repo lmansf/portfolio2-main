@@ -252,9 +252,9 @@ function closeProjectModal(modal) {
 
 const BLOG_UNLOCK_KEY = 'portfolio_blog_unlocked';
 const BLOG_UNLOCK_LEGACY_KEY = 'portfolio_blog_unlocked';
-const SHOP_PRODUCTS_CACHE_KEY = 'portfolio_shop_products_cache_v1';
-const SHOP_PRODUCTS_CACHE_TIME_KEY = 'portfolio_shop_products_cache_time_v1';
-const SHOP_PRODUCTS_CACHE_TTL_MS = 5 * 60 * 1000;
+const TRANSITION_SHOP_PRODUCTS_CACHE_KEY = 'portfolio_shop_products_cache_v1';
+const TRANSITION_SHOP_PRODUCTS_CACHE_TIME_KEY = 'portfolio_shop_products_cache_time_v1';
+const TRANSITION_SHOP_PRODUCTS_CACHE_TTL_MS = 5 * 60 * 1000;
 const SHOP_PREFETCH_TIMEOUT_MS = 6000;
 const SHOP_PAGE_HTML_CACHE_TTL_MS = 5 * 60 * 1000;
 const SHOP_SUPABASE_URL = 'https://xcubnwvyvhjfyiixunfg.supabase.co';
@@ -270,7 +270,7 @@ let snakePointerOffsetY = 0;
 
 function getShopProductsCacheAgeMs() {
     try {
-        const rawTimestamp = Number(sessionStorage.getItem(SHOP_PRODUCTS_CACHE_TIME_KEY));
+        const rawTimestamp = Number(sessionStorage.getItem(TRANSITION_SHOP_PRODUCTS_CACHE_TIME_KEY));
         if (!Number.isFinite(rawTimestamp) || rawTimestamp <= 0) return Infinity;
         return Date.now() - rawTimestamp;
     } catch {
@@ -279,7 +279,7 @@ function getShopProductsCacheAgeMs() {
 }
 
 function hasFreshShopProductsCache() {
-    return getShopProductsCacheAgeMs() <= SHOP_PRODUCTS_CACHE_TTL_MS;
+    return getShopProductsCacheAgeMs() <= TRANSITION_SHOP_PRODUCTS_CACHE_TTL_MS;
 }
 
 function hasFreshShopPageHtmlCache() {
@@ -373,8 +373,8 @@ async function prefetchShopProductsIfNeeded() {
                 return;
             }
 
-            sessionStorage.setItem(SHOP_PRODUCTS_CACHE_KEY, JSON.stringify(products));
-            sessionStorage.setItem(SHOP_PRODUCTS_CACHE_TIME_KEY, String(Date.now()));
+            sessionStorage.setItem(TRANSITION_SHOP_PRODUCTS_CACHE_KEY, JSON.stringify(products));
+            sessionStorage.setItem(TRANSITION_SHOP_PRODUCTS_CACHE_TIME_KEY, String(Date.now()));
         } catch {
             // ignore prefetch failures and continue normal behavior
         } finally {
