@@ -402,6 +402,7 @@ function getCartEntries() {
         .map(([productId, quantity]) => {
             const product = shopState.products.find((item) => item.id === productId);
             if (!product) return null;
+            if (product.isHidden || isRoundingProductName(product.name)) return null;
             return {
                 product,
                 quantity,
@@ -731,6 +732,7 @@ function addToCart(productId) {
 
     const product = shopState.products.find((item) => item.id === productId);
     if (!product) return;
+    if (product.isHidden || isRoundingProductName(product.name)) return;
 
     const remainingQuantity = getRemainingQuantity(product);
     if (remainingQuantity <= 0) {
