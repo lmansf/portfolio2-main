@@ -1,10 +1,12 @@
 const SHOP_PRODUCT_SOURCE = 'assets/data/products.json';
+const SALES_TAX_RATE = 0.07;
+const SERVICE_FEE = 2.49;
 const SHOP_FALLBACK_PRODUCTS = [
     {
         id: 'owl-adoption-plush',
         name: 'Adopt-an-Owl Plush',
         description: 'Soft rescue owl plush with a name tag from the nocturnal aviary.',
-        price: 24.95,
+        price: 24.99,
         category: 'Gift Shop',
         stock: 28
     },
@@ -12,7 +14,7 @@ const SHOP_FALLBACK_PRODUCTS = [
         id: 'moonlight-owl-tour',
         name: 'Moonlight Owl Walk Ticket',
         description: 'After-hours guided tour through the owl habitat and rehab observation deck.',
-        price: 42.0,
+        price: 42.99,
         category: 'Experience',
         capacity: 16
     },
@@ -20,7 +22,7 @@ const SHOP_FALLBACK_PRODUCTS = [
         id: 'keeper-for-day-pass',
         name: 'Junior Keeper Pass',
         description: 'Hands-on educational session assisting keepers with owl enrichment setup.',
-        price: 79.0,
+        price: 79.99,
         category: 'Education',
         capacity: 10
     },
@@ -28,7 +30,7 @@ const SHOP_FALLBACK_PRODUCTS = [
         id: 'owl-cafe-combo',
         name: 'Owl Cafe Snack Bundle',
         description: 'Facility cafe combo with hot cocoa, themed pastry, and souvenir cup.',
-        price: 18.5,
+        price: 18.99,
         category: 'Cafe',
         stock: 35
     },
@@ -36,7 +38,7 @@ const SHOP_FALLBACK_PRODUCTS = [
         id: 'night-vision-binocular-rental',
         name: 'Night Vision Binocular Rental',
         description: 'Two-hour rental for dusk feeding demos and owl flight observation.',
-        price: 16.0,
+        price: 16.99,
         category: 'Rental',
         stock: 12
     },
@@ -44,7 +46,7 @@ const SHOP_FALLBACK_PRODUCTS = [
         id: 'owl-habitat-donation',
         name: 'Habitat Restoration Donation',
         description: 'Contribute directly to enclosure upgrades and medical care supplies.',
-        price: 25.0,
+        price: 25.99,
         category: 'Support',
         stock: 999
     },
@@ -52,7 +54,7 @@ const SHOP_FALLBACK_PRODUCTS = [
         id: 'owl-feather-journal',
         name: 'Field Notes Journal',
         description: 'Recycled paper journal inspired by owl tracking logs used by staff.',
-        price: 14.75,
+        price: 14.99,
         category: 'Gift Shop',
         stock: 40
     },
@@ -60,7 +62,7 @@ const SHOP_FALLBACK_PRODUCTS = [
         id: 'kids-owl-workshop',
         name: 'Kids Owl Discovery Workshop',
         description: 'Weekend workshop with interactive stations, pellets lab, and storytelling.',
-        price: 29.0,
+        price: 29.99,
         category: 'Education',
         capacity: 14
     }
@@ -70,8 +72,32 @@ const shopState = {
     products: [],
     cart: new Map(),
     ticketDates: new Map(),
+    roundToNearestDollar: false,
     isCheckoutComplete: false
 };
+
+function formatSignedCurrency(value) {
+    const absoluteAmount = formatCurrency(Math.abs(value));
+    if (value > 0) return `+${absoluteAmount}`;
+    if (value < 0) return `-${absoluteAmount}`;
+    return absoluteAmount;
+}
+
+function getPricingSummary(subtotal, shouldRound) {
+    const tax = subtotal > 0 ? subtotal * SALES_TAX_RATE : 0;
+    const serviceFee = subtotal > 0 ? SERVICE_FEE : 0;
+    const preRoundTotal = subtotal + tax + serviceFee;
+    const total = shouldRound ? Math.round(preRoundTotal) : preRoundTotal;
+    const roundingAdjustment = shouldRound ? total - preRoundTotal : 0;
+
+    return {
+        subtotal,
+        tax,
+        serviceFee,
+        roundingAdjustment,
+        total
+    };
+}
 
 function getTodayIsoDate() {
     const now = new Date();
@@ -185,11 +211,24 @@ function getCartSubtotal() {
 
 function updateTotals() {
     const subtotal = getCartSubtotal();
+    const pricingSummary = getPricingSummary(subtotal, shopState.roundToNearestDollar);
+
     const subtotalElement = document.getElementById('shop-subtotal');
+    const taxElement = document.getElementById('shop-tax');
+    const serviceFeeElement = document.getElementById('shop-service-fee');
+    const roundingRowElement = document.getElementById('shop-rounding-row');
+    const roundingElement = document.getElementById('shop-rounding');
     const totalElement = document.getElementById('shop-total');
 
-    if (subtotalElement) subtotalElement.textContent = formatCurrency(subtotal);
-    if (totalElement) totalElement.textContent = formatCurrency(subtotal);
+    if (subtotalElement) subtotalElement.textContent = formatCurrency(pricingSummary.subtotal);
+    if (taxElement) taxElement.textContent = formatCurrency(pricingSummary.tax);
+    if (serviceFeeElement) serviceFeeElement.textContent = formatCurrency(pricingSummary.serviceFee);
+    if (roundingElement) roundingElement.textContent = formatSignedCurrency(pricingSummary.roundingAdjustment);
+    if (roundingRowElement) {
+        const showRoundingLine = pricingSummary.subtotal > 0 && shopState.roundToNearestDollar;
+        roundingRowElement.hidden = !showRoundingLine;
+    }
+    if (totalElement) totalElement.textContent = formatCurrency(pricingSummary.total);
 
     const placeOrderButton = document.getElementById('shop-place-order');
     if (placeOrderButton) {
@@ -205,6 +244,11 @@ function setFormMessage(message, type = 'neutral') {
 
     messageElement.textContent = message;
     messageElement.dataset.type = type;
+}
+
+function syncRoundPreference() {
+    const roundToggle = document.getElementById('shop-round-toggle');
+    shopState.roundToNearestDollar = Boolean(roundToggle && roundToggle.checked);
 }
 
 function createQuantityInput(product, quantity) {
@@ -491,6 +535,14 @@ function attachCheckoutHandler() {
 
     handleCardFormatting(form);
 
+    const roundToggle = document.getElementById('shop-round-toggle');
+    if (roundToggle) {
+        roundToggle.addEventListener('change', () => {
+            syncRoundPreference();
+            updateTotals();
+        });
+    }
+
     const startNewOrderButton = getStartNewOrderButton();
     if (startNewOrderButton) {
         startNewOrderButton.addEventListener('click', startNewOrder);
@@ -552,6 +604,7 @@ async function initializeShopPage() {
     shopState.products = [];
     shopState.cart = new Map();
     shopState.ticketDates = new Map();
+    shopState.roundToNearestDollar = false;
     shopState.isCheckoutComplete = false;
     setCheckoutInputsDisabled(false);
     updateCheckoutActionState();

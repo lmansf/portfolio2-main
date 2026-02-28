@@ -54,6 +54,18 @@
                             <strong id="shop-subtotal">$0.00</strong>
                         </div>
                         <div>
+                            <span>Sales Tax (7%)</span>
+                            <strong id="shop-tax">$0.00</strong>
+                        </div>
+                        <div>
+                            <span>Service Fee</span>
+                            <strong id="shop-service-fee">$0.00</strong>
+                        </div>
+                        <div id="shop-rounding-row" hidden>
+                            <span>Rounding</span>
+                            <strong id="shop-rounding">$0.00</strong>
+                        </div>
+                        <div>
                             <span>Total</span>
                             <strong id="shop-total">$0.00</strong>
                         </div>
@@ -85,6 +97,10 @@
                     <label>
                         Card Number (mock)
                         <input type="text" name="cardNumber" inputmode="numeric" maxlength="19" placeholder="1234 5678 9012 3456" required>
+                    </label>
+                    <label class="shop-rounding-toggle">
+                        <input id="shop-round-toggle" type="checkbox" name="roundToDollar">
+                        Round total to nearest dollar
                     </label>
                     <div class="shop-checkout-actions">
                         <button id="shop-place-order" class="consult-btn" type="submit" disabled>
