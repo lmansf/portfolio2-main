@@ -968,6 +968,7 @@ async function loadProducts() {
     const { data, error } = await client
         .from(SHOP_PRODUCTS_TABLE)
         .select('id, product_name, category, description, unit_price, stock')
+        .order('unit_price', { ascending: true })
         .order('product_name', { ascending: true });
 
     if (error) {
