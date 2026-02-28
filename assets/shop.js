@@ -300,16 +300,30 @@ function requiresVisitDate(product) {
     return category === 'experience' || /ticket|tour|workshop/.test(name);
 }
 
+function isUnlimitedInventoryValue(value) {
+    return Number(value) === -1;
+}
+
 function getInventoryLimit(product) {
     if (!product) return 0;
     const sourceValue = isTicketProduct(product) ? product.capacity : product.stock;
     const parsedValue = Number(sourceValue);
     if (!Number.isFinite(parsedValue)) return 0;
+    if (isUnlimitedInventoryValue(parsedValue)) return Number.POSITIVE_INFINITY;
     return Math.max(0, Math.floor(parsedValue));
 }
 
 function setInventoryLimit(product, nextValue) {
     if (!product) return;
+    if (isUnlimitedInventoryValue(nextValue)) {
+        if (isTicketProduct(product)) {
+            product.capacity = -1;
+            return;
+        }
+        product.stock = -1;
+        return;
+    }
+
     const sanitizedValue = Math.max(0, Math.floor(Number(nextValue) || 0));
     if (isTicketProduct(product)) {
         product.capacity = sanitizedValue;
@@ -321,10 +335,18 @@ function setInventoryLimit(product, nextValue) {
 function getRemainingQuantity(product) {
     const inventoryLimit = getInventoryLimit(product);
     const quantityInCart = shopState.cart.get(product.id) || 0;
+    if (!Number.isFinite(inventoryLimit)) {
+        return Number.POSITIVE_INFINITY;
+    }
     return Math.max(0, inventoryLimit - quantityInCart);
 }
 
 function getAvailabilityText(product) {
+    if (!product) return '';
+    if (!Number.isFinite(getInventoryLimit(product))) {
+        return isTicketProduct(product) ? 'Unlimited spots' : 'Unlimited stock';
+    }
+
     const remaining = getRemainingQuantity(product);
     return isTicketProduct(product) ? `${remaining} spots left` : `${remaining} in stock`;
 }
@@ -406,7 +428,7 @@ function createTransactionId() {
 function createTransactionRows(transactionId, contactDetails, cartEntries, transactionStatus) {
     const statusValue = transactionStatus ? 1 : 0;
 
-    return cartEntries.map(({ product, quantity }) => ({
+    const rows = cartEntries.map(({ product, quantity }) => ({
         transaction_id: transactionId,
         contact_name: contactDetails.name,
         contact_email: contactDetails.email,
@@ -418,6 +440,25 @@ function createTransactionRows(transactionId, contactDetails, cartEntries, trans
         transaction_status: statusValue,
         quantity
     }));
+
+    const roundingAdjustment = Number(contactDetails.roundingAdjustment);
+    const roundingProductId = String(contactDetails.roundingProductId || '').trim();
+    if (shopState.roundToNearestDollar && roundingProductId) {
+        rows.push({
+            transaction_id: transactionId,
+            contact_name: contactDetails.name,
+            contact_email: contactDetails.email,
+            contact_shipping_address: contactDetails.shippingAddress,
+            contact_city: contactDetails.city,
+            contact_postal: contactDetails.postalCode,
+            product_id: roundingProductId,
+            product_price: Number.isFinite(roundingAdjustment) ? roundingAdjustment : 0,
+            transaction_status: statusValue,
+            quantity: 1
+        });
+    }
+
+    return rows;
 }
 
 async function insertTransactionRows(rows) {
@@ -497,13 +538,36 @@ function syncRoundPreference() {
     shopState.roundToNearestDollar = Boolean(roundToggle && roundToggle.checked);
 }
 
+function getRoundingProduct() {
+    if (!Array.isArray(shopState.products) || !shopState.products.length) {
+        return null;
+    }
+
+    const exactMatch = shopState.products.find((product) => {
+        const normalizedName = String(product.name || '').trim().toLowerCase();
+        return normalizedName === 'rounding';
+    });
+
+    if (exactMatch) {
+        return exactMatch;
+    }
+
+    return shopState.products.find((product) => {
+        const normalizedName = String(product.name || '').trim().toLowerCase();
+        return normalizedName.includes('rounding');
+    }) || null;
+}
+
 function createQuantityInput(product, quantity) {
     const maxQuantity = getInventoryLimit(product);
+    const hasUnlimitedQuantity = !Number.isFinite(maxQuantity);
 
     const input = document.createElement('input');
     input.type = 'number';
     input.min = '1';
-    input.max = String(maxQuantity);
+    if (!hasUnlimitedQuantity) {
+        input.max = String(maxQuantity);
+    }
     input.step = '1';
     input.value = String(quantity);
     input.className = 'shop-quantity-input';
@@ -518,7 +582,7 @@ function createQuantityInput(product, quantity) {
             return;
         }
 
-        const clampedValue = Math.min(parsedValue, maxQuantity);
+        const clampedValue = hasUnlimitedQuantity ? parsedValue : Math.min(parsedValue, maxQuantity);
         if (clampedValue <= 0) {
             shopState.cart.delete(product.id);
             shopState.ticketDates.delete(product.id);
@@ -762,7 +826,11 @@ function validateCheckoutForm(form) {
     }
 
     const invalidInventory = getCartEntries().find(({ product, quantity }) => {
-        return quantity > getInventoryLimit(product) || getInventoryLimit(product) <= 0;
+        const inventoryLimit = getInventoryLimit(product);
+        if (!Number.isFinite(inventoryLimit)) {
+            return false;
+        }
+        return quantity > inventoryLimit || inventoryLimit <= 0;
     });
 
     if (invalidInventory) {
@@ -806,6 +874,12 @@ async function applyOrderInventoryReduction() {
         const currentStock = Number(currentRow.stock);
         if (!Number.isFinite(currentStock)) {
             throw new Error(`Product ${product.name} has invalid stock data.`);
+        }
+
+        if (isUnlimitedInventoryValue(currentStock)) {
+            product.stock = -1;
+            product.capacity = -1;
+            continue;
         }
 
         if (currentStock < quantity) {
@@ -914,8 +988,29 @@ function attachCheckoutHandler() {
             email: String(formValues.email || '').trim(),
             shippingAddress: String(formValues.shippingAddress || '').trim(),
             city: String(formValues.city || '').trim(),
-            postalCode: String(formValues.postalCode || '').trim()
+            postalCode: String(formValues.postalCode || '').trim(),
+            roundingProductId: '',
+            roundingAdjustment: 0
         };
+
+        if (shopState.roundToNearestDollar) {
+            const roundingProduct = getRoundingProduct();
+            if (!roundingProduct) {
+                setFormMessage('Rounding product is missing from products. Add a product named "Rounding" to continue with rounding.', 'error');
+                if (placeOrderButton) {
+                    placeOrderButton.disabled = false;
+                    delete placeOrderButton.dataset.pending;
+                }
+                return;
+            }
+
+            const subtotal = getCartSubtotal();
+            const basePricingSummary = getPricingSummary(subtotal, false, 0);
+            const promotionDiscountAmount = getPromotionDiscountAmount(basePricingSummary.total);
+            const pricingSummary = getPricingSummary(subtotal, true, promotionDiscountAmount);
+            contactDetails.roundingProductId = roundingProduct.id;
+            contactDetails.roundingAdjustment = pricingSummary.roundingAdjustment;
+        }
 
         const placeOrderButton = document.getElementById('shop-place-order');
         if (placeOrderButton) {
@@ -970,7 +1065,7 @@ async function loadProducts() {
 
     const { data, error } = await client
         .from(SHOP_PRODUCTS_TABLE)
-        .select('id, product_name, category, description, unit_price, stock')
+        .select('id, product_name, category, description, unit_price, stock, is_hidden')
         .order('unit_price', { ascending: true })
         .order('product_name', { ascending: true });
 
@@ -996,6 +1091,7 @@ function mapProductsResponseRows(rows) {
             const description = String(row.description || '').trim() || 'No description available.';
             const price = Number(row.unit_price);
             const stock = Number(row.stock);
+            const isHidden = Boolean(row.is_hidden);
 
             if (!id || !name || !Number.isFinite(price) || !Number.isFinite(stock)) {
                 const missingFields = [];
@@ -1013,13 +1109,15 @@ function mapProductsResponseRows(rows) {
                 category,
                 description,
                 price,
-                stock: Math.max(0, Math.floor(stock)),
-                capacity: Math.max(0, Math.floor(stock))
+                stock: isUnlimitedInventoryValue(stock) ? -1 : Math.max(0, Math.floor(stock)),
+                capacity: isUnlimitedInventoryValue(stock) ? -1 : Math.max(0, Math.floor(stock)),
+                isHidden
             };
 
             return mappedProduct;
         })
-        .filter(Boolean);
+        .filter(Boolean)
+        .filter((product) => !product.isHidden);
 }
 
 function readCachedProducts() {
@@ -1049,7 +1147,8 @@ function writeCachedProducts(products) {
             category: product.category,
             description: product.description,
             unit_price: product.price,
-            stock: product.stock
+            stock: product.stock,
+            is_hidden: Boolean(product.isHidden)
         }));
 
         sessionStorage.setItem(SHOP_PRODUCTS_CACHE_KEY, JSON.stringify(rowsForCache));

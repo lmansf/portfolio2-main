@@ -140,10 +140,7 @@ async function navigateTo(url, options = {}) {
     
     try {
         // 2. Fetch new content
-        const response = await fetch(url);
-        const text = await response.text();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(text, 'text/html');
+        const doc = await getIncomingDocumentForNavigation(url, normalizedTarget);
 
         await syncManagedStylesheet(doc);
         await syncPageScripts(doc);
@@ -213,6 +210,8 @@ async function navigateTo(url, options = {}) {
 
         applyBlogUnlockState();
         setupInteractiveSnake();
+        wireShopPrefetchInteractions();
+        scheduleShopProductsPrefetch();
 
         if (isProjectsDestination) {
             animateProjectsLoadIn();
@@ -257,10 +256,13 @@ const SHOP_PRODUCTS_CACHE_KEY = 'portfolio_shop_products_cache_v1';
 const SHOP_PRODUCTS_CACHE_TIME_KEY = 'portfolio_shop_products_cache_time_v1';
 const SHOP_PRODUCTS_CACHE_TTL_MS = 5 * 60 * 1000;
 const SHOP_PREFETCH_TIMEOUT_MS = 6000;
+const SHOP_PAGE_HTML_CACHE_TTL_MS = 5 * 60 * 1000;
 const SHOP_SUPABASE_URL = 'https://xcubnwvyvhjfyiixunfg.supabase.co';
 const SHOP_SUPABASE_ANON_KEY = 'sb_publishable_K5k9vLXtDUo8qoyWrwX3qg_qN_3xWfy';
-const SHOP_REST_PRODUCTS_URL = `${SHOP_SUPABASE_URL}/rest/v1/products?select=id,product_name,category,description,unit_price,stock&order=unit_price.asc,product_name.asc`;
+const SHOP_REST_PRODUCTS_URL = `${SHOP_SUPABASE_URL}/rest/v1/products?select=id,product_name,category,description,unit_price,stock,is_hidden&order=unit_price.asc,product_name.asc`;
 let shopProductsPrefetchPromise = null;
+let shopPageHtmlPrefetchPromise = null;
+let shopPageHtmlCache = null;
 let interactiveSnakeHandle = null;
 let isSnakeDragging = false;
 let snakePointerOffsetX = 0;
@@ -278,6 +280,61 @@ function getShopProductsCacheAgeMs() {
 
 function hasFreshShopProductsCache() {
     return getShopProductsCacheAgeMs() <= SHOP_PRODUCTS_CACHE_TTL_MS;
+}
+
+function hasFreshShopPageHtmlCache() {
+    if (!shopPageHtmlCache || !shopPageHtmlCache.text || !shopPageHtmlCache.timestamp) {
+        return false;
+    }
+
+    return Date.now() - shopPageHtmlCache.timestamp <= SHOP_PAGE_HTML_CACHE_TTL_MS;
+}
+
+async function prefetchShopPageHtmlIfNeeded() {
+    if (normalizeInternalPath(window.location.pathname) === 'shop.html') {
+        return;
+    }
+
+    if (hasFreshShopPageHtmlCache()) {
+        return;
+    }
+
+    if (shopPageHtmlPrefetchPromise) {
+        return shopPageHtmlPrefetchPromise;
+    }
+
+    shopPageHtmlPrefetchPromise = (async () => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), SHOP_PREFETCH_TIMEOUT_MS);
+
+        try {
+            const response = await fetch('shop.html', {
+                method: 'GET',
+                signal: controller.signal
+            });
+
+            if (!response.ok) {
+                return;
+            }
+
+            const text = await response.text();
+            if (!text) {
+                return;
+            }
+
+            shopPageHtmlCache = {
+                text,
+                timestamp: Date.now()
+            };
+        } catch {
+            // ignore prefetch failures and continue normal behavior
+        } finally {
+            clearTimeout(timeoutId);
+            shopPageHtmlPrefetchPromise = null;
+        }
+    })();
+
+    return shopPageHtmlPrefetchPromise;
 }
 
 async function prefetchShopProductsIfNeeded() {
@@ -331,6 +388,7 @@ async function prefetchShopProductsIfNeeded() {
 
 function requestShopPrefetch() {
     void prefetchShopProductsIfNeeded();
+    void prefetchShopPageHtmlIfNeeded();
 }
 
 function scheduleShopProductsPrefetch() {
