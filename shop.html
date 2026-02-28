@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logan Mansfield | Shop</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="shortcut icon" href="assets/favicon.svg">
+    <link rel="stylesheet" href="assets/style.css">
+    <script>
+        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    </script>
+    <script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body>
+
+    <header>
+        <div class="logo-text">L. MANSFIELD</div>
+        <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" data-nav-toggle>
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+        <nav class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="projects.html">Projects</a>
+            <a href="shop.html" class="active">Shop</a>
+            <a href="blog.html" class="blog-disabled" data-disabled-blog="true" aria-disabled="true">Blog</a>
+            <a href="resume.html">Resume</a>
+            <a href="feedback.html">Feedback</a>
+            <a href="assets/resume_ats.txt" target="_blank">ATS Resume</a>
+        </nav>
+    </header>
+
+    <main class="shop-view">
+        <section class="shop-intro">
+            <h1>Mock E-Commerce Store</h1>
+            <p>Browse products, add them to your cart, and complete a simulated checkout flow.</p>
+        </section>
+
+        <section class="shop-layout" aria-label="Shop and checkout layout">
+            <div class="shop-products-panel">
+                <h2>Products</h2>
+                <div id="shop-product-grid" class="shop-product-grid" aria-live="polite"></div>
+            </div>
+
+            <aside class="shop-checkout-panel" aria-label="Cart and checkout">
+                <div class="shop-cart-summary">
+                    <h2>Cart</h2>
+                    <div id="shop-cart-items" class="shop-cart-items"></div>
+                    <div class="shop-cart-totals">
+                        <div>
+                            <span>Subtotal</span>
+                            <strong id="shop-subtotal">$0.00</strong>
+                        </div>
+                        <div>
+                            <span>Total</span>
+                            <strong id="shop-total">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="shop-checkout-form" class="shop-checkout-form" novalidate>
+                    <h3>Checkout</h3>
+                    <label>
+                        Full Name
+                        <input type="text" name="fullName" autocomplete="name" required>
+                    </label>
+                    <label>
+                        Email
+                        <input type="email" name="email" autocomplete="email" required>
+                    </label>
+                    <label>
+                        Shipping Address
+                        <input type="text" name="shippingAddress" autocomplete="street-address" required>
+                    </label>
+                    <label>
+                        City
+                        <input type="text" name="city" autocomplete="address-level2" required>
+                    </label>
+                    <label>
+                        Postal Code
+                        <input type="text" name="postalCode" autocomplete="postal-code" required>
+                    </label>
+                    <label>
+                        Card Number (mock)
+                        <input type="text" name="cardNumber" inputmode="numeric" maxlength="19" placeholder="1234 5678 9012 3456" required>
+                    </label>
+                    <div class="shop-checkout-actions">
+                        <button id="shop-place-order" class="consult-btn" type="submit" disabled>
+                            <span>Place Order</span>
+                            <span>&#8594;</span>
+                        </button>
+                        <button id="shop-start-new-order" class="shop-secondary-btn" type="button" hidden>
+                            Start New Order
+                        </button>
+                    </div>
+                    <p id="shop-form-message" class="shop-form-message" role="status" aria-live="polite"></p>
+                </form>
+            </aside>
+        </section>
+    </main>
+
+    <footer>
+        <div class="marquee">
+            <div class="marquee-content">
+                <span>📊 Microsoft Power BI</span> <span class="separator">•</span>
+                <span>🐍 Python</span> <span class="separator">•</span>
+                <span>📈 Microsoft Excel</span> <span class="separator">•</span>
+                <span>🗄️ SQL</span> <span class="separator">•</span>
+                <span>🧠 Machine Learning</span> <span class="separator">•</span>
+                <span>🧱 Microsoft Fabric</span> <span class="separator">•</span>
+                <span>❄️ Snowflake</span> <span class="separator">•</span>
+                <span>📊 Microsoft Power BI</span> <span class="separator">•</span>
+                <span>🐍 Python</span> <span class="separator">•</span>
+                <span>📈 Microsoft Excel</span> <span class="separator">•</span>
+                <span>🗄️ SQL</span> <span class="separator">•</span>
+                <span>🧠 Machine Learning</span> <span class="separator">•</span>
+                <span>🧱 Microsoft Fabric</span> <span class="separator">•</span>
+                <span>❄️ Snowflake</span> <span class="separator">•</span>
+            </div>
+        </div>
+
+        <div class="footer-socials">
+            <a href="https://x.com/StatBird" target="_blank">TWITTER</a>
+            <a href="https://github.com/lmansf" target="_blank">GITHUB</a>
+            <a href="https://www.linkedin.com/in/lmansf96/" target="_blank">LINKEDIN</a>
+        </div>
+    </footer>
+
+    <script defer src="assets/shop.js"></script>
+    <script defer src="assets/transition.js"></script>
+</body>
+</html>

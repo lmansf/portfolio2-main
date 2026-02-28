@@ -44,7 +44,7 @@ function normalizeInternalPath(url) {
 }
 
 function isTransitionPage(path) {
-    return ['index.html', 'projects.html', 'blog.html', 'resume.html', 'feedback.html'].includes(path);
+    return ['index.html', 'projects.html', 'shop.html', 'blog.html', 'resume.html', 'feedback.html'].includes(path);
 }
 
 function isAtsResumeLink(link) {
@@ -58,6 +58,41 @@ function getManagedStylesheet(doc) {
         const href = (link.getAttribute('href') || '').toLowerCase();
         return href.includes('assets/index.css') || href.includes('assets/style.css');
     }) || null;
+}
+
+function getPageScriptDescriptors(doc) {
+    return Array.from(doc.querySelectorAll('script[src]'))
+        .map((script) => ({
+            src: script.getAttribute('src'),
+            type: script.getAttribute('type') || 'text/javascript'
+        }))
+        .filter((script) => {
+            if (!script.src) return false;
+            const normalizedSrc = script.src.toLowerCase();
+            if (normalizedSrc.includes('/_vercel/insights/script.js')) return false;
+            if (normalizedSrc.endsWith('assets/transition.js')) return false;
+            return true;
+        });
+}
+
+async function syncPageScripts(incomingDoc) {
+    const scripts = getPageScriptDescriptors(incomingDoc);
+    for (const { src, type } of scripts) {
+        if (document.querySelector(`script[src="${src}"]`)) continue;
+
+        const scriptElement = document.createElement('script');
+        scriptElement.src = src;
+        if (type && type !== 'text/javascript') {
+            scriptElement.type = type;
+        }
+        scriptElement.defer = true;
+
+        await new Promise((resolve) => {
+            scriptElement.addEventListener('load', resolve, { once: true });
+            scriptElement.addEventListener('error', resolve, { once: true });
+            document.body.appendChild(scriptElement);
+        });
+    }
 }
 
 async function syncManagedStylesheet(incomingDoc) {
@@ -111,6 +146,7 @@ async function navigateTo(url, options = {}) {
         const doc = parser.parseFromString(text, 'text/html');
 
         await syncManagedStylesheet(doc);
+        await syncPageScripts(doc);
         
         // Wait for exit animation
         await new Promise(resolve => setTimeout(resolve, 500)); // Match CSS transition duration
@@ -160,10 +196,12 @@ async function navigateTo(url, options = {}) {
         }
         
         // 4. Re-initialize scripts
-        if (url === 'blog.html' || url.includes('blog.html')) {
-            if (window.loadBlogs) {
-                window.loadBlogs();
-            }
+        if (normalizedTarget === 'blog.html' && window.loadBlogs) {
+            window.loadBlogs();
+        }
+
+        if (normalizedTarget === 'shop.html' && window.initializeShopPage) {
+            window.initializeShopPage();
         }
         
         // 5. Enter animation
