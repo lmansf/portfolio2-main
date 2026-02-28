@@ -258,6 +258,7 @@ main {
     padding: 15px;
     background: var(--accent-color);
     color: #1e1e1e;
+    text-decoration: none;
     border: none;
     font-weight: 700;
     cursor: pointer;
@@ -291,6 +292,11 @@ main {
     font-size: 1.1rem;
     line-height: 1.4;
     color: #f0ddb3;
+}
+
+.section-note {
+    font-size: 0.9rem;
+    color: var(--secondary-text);
 }
 
 .chatbot-panel {

@@ -15,13 +15,6 @@
     <script defer src="/_vercel/insights/script.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <style>
-        /* Hide scrollbar for cleaner look */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1e1e1e; }
-        ::-webkit-scrollbar-thumb { background: #2f5a49; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #3f7a62; }
-    </style>
 </head>
 <body>
 
@@ -55,7 +48,7 @@
 
         <div id="blog-grid">
              <!-- Loading State -->
-             <div id="blog-loading" style="grid-column: 1 / -1; text-align: center; color: #93c7ae; font-size: 0.9rem;">
+             <div id="blog-loading" class="blog-loading-state">
                 <p>Loading thoughts...</p>
             </div>
         </div>
@@ -91,16 +84,16 @@
     </footer>
 
     <!-- Fullscreen Post Overlay -->
-    <div id="post-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(30, 30, 30, 0.96); z-index: 9999; overflow-y: auto; flex-direction: column;">
-        <div id="post-overlay-close" style="position: fixed; top: 20px; right: 30px; font-size: 2rem; color: #e9fff5; cursor: pointer; z-index: 10000; background: rgba(153,255,204,0.12); width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; line-height: 1; transition: background 0.3s;">&times;</div>
-        <div id="post-overlay-image" style="width: 100%; height: 40vh; background-size: cover; background-position: center; flex-shrink: 0; margin-bottom: 2rem;"></div>
-        <div style="max-width: 800px; margin: 0 auto; padding: 0 20px 100px 20px; width: 100%; box-sizing: border-box;">
-            <div style="margin-bottom: 10px; display: flex; align-items: center;">
-                <span id="post-overlay-category" class="project-tag" style="background: transparent; border: 1px solid rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 4px; margin-bottom: 0;"></span>
-                <span id="post-overlay-date" style="color: #93c7ae; margin-left: 15px; font-size: 0.9rem;"></span>
+    <div id="post-overlay">
+        <button id="post-overlay-close" type="button" aria-label="Close post overlay">&times;</button>
+        <div id="post-overlay-image"></div>
+        <div class="post-overlay-shell">
+            <div class="post-overlay-meta">
+                <span id="post-overlay-category" class="project-tag"></span>
+                <span id="post-overlay-date"></span>
             </div>
-            <h1 id="post-overlay-title" style="font-size: 3rem; margin: 20px 0 30px 0; line-height: 1.1; font-weight: 800;"></h1>
-            <div id="post-overlay-content" class="blog-markdown-content" style="color: #d2fce7; line-height: 1.8; font-size: 1.1rem;"></div>
+            <h1 id="post-overlay-title"></h1>
+            <div id="post-overlay-content" class="blog-markdown-content"></div>
         </div>
     </div>
 

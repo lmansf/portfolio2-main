@@ -90,7 +90,7 @@ function renderBlogs(blogs, container) {
     container.innerHTML = '';
     
     if (!blogs) {
-        container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #888;"><p>No blog posts found.</p></div>`;
+        container.innerHTML = '<div class="blog-empty-state"><p>No blog posts found.</p></div>';
         return;
     }
 
@@ -104,7 +104,7 @@ function renderBlogs(blogs, container) {
     });
 
     if (validBlogs.length === 0) {
-        container.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #888;"><p>No blog posts found.</p></div>`;
+        container.innerHTML = '<div class="blog-empty-state"><p>No blog posts found.</p></div>';
         return;
     }
 
@@ -161,9 +161,9 @@ function renderBlogs(blogs, container) {
         card.innerHTML = `
             <div class="project-card-content">
                 <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                        <span class="project-tag" style="margin-bottom: 0;">${category}</span>
-                        <span style="color: #666; font-size: 0.85rem;">${dateStr}</span>
+                    <div class="blog-card-meta">
+                        <span class="project-tag">${category}</span>
+                        <span class="blog-card-date">${dateStr}</span>
                     </div>
                     <h2>${title}</h2>
                     <p class="post-excerpt">${excerpt}</p>
