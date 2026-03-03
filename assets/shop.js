@@ -1792,17 +1792,20 @@ async function applyOrderInventoryReduction() {
                         throw new Error(`Requested quantity exceeds capacity for ${product.name} on ${visitDate}.`);
                     }
 
-                    const { data: updatedEventRow, error: updateEventError } = await client
+                    const { data: updatedEventRows, error: updateEventError } = await client
                         .from(EVENTS_TABLE)
                         .update({ spots_purchased: nextSpotsPurchased })
                         .eq('id', normalizedEvent.id)
                         .eq('spots_purchased', normalizedEvent.spotsPurchased)
-                        .select('*')
-                        .maybeSingle();
+                        .select('*');
 
                     if (updateEventError) {
                         throw new Error(`Could not update event capacity for ${product.name}: ${updateEventError.message}`);
                     }
+
+                    const updatedEventRow = Array.isArray(updatedEventRows) && updatedEventRows.length
+                        ? updatedEventRows[0]
+                        : null;
 
                     if (updatedEventRow) {
                         updatedAvailability = normalizeEventAvailabilityRow(updatedEventRow);
