@@ -29,6 +29,7 @@ const shopState = {
     cart: new Map(),
     ticketDates: new Map(),
     eventAvailability: new Map(),
+    eventCalendarByProduct: new Map(),
     roundToNearestDollar: false,
     appliedPromotion: null,
     isCheckoutComplete: false
@@ -289,6 +290,74 @@ function getTodayIsoDate() {
     return `${year}-${month}-${day}`;
 }
 
+function padDatePart(value) {
+    return String(value).padStart(2, '0');
+}
+
+function parseIsoDate(dateIso) {
+    const normalizedDate = String(dateIso || '').trim();
+    const match = normalizedDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return null;
+    return {
+        year: Number(match[1]),
+        month: Number(match[2]),
+        day: Number(match[3])
+    };
+}
+
+function buildIsoDate(year, month, day) {
+    return `${year}-${padDatePart(month)}-${padDatePart(day)}`;
+}
+
+function getMonthKey(dateIso) {
+    const parsedDate = parseIsoDate(dateIso);
+    if (!parsedDate) return '';
+    return `${parsedDate.year}-${padDatePart(parsedDate.month)}`;
+}
+
+function parseMonthKey(monthKey) {
+    const normalizedMonth = String(monthKey || '').trim();
+    const match = normalizedMonth.match(/^(\d{4})-(\d{2})$/);
+    if (!match) return null;
+    return {
+        year: Number(match[1]),
+        month: Number(match[2])
+    };
+}
+
+function shiftMonthKey(monthKey, delta) {
+    const parsedMonth = parseMonthKey(monthKey);
+    if (!parsedMonth) return getMonthKey(getTodayIsoDate());
+
+    const shiftedDate = new Date(Date.UTC(parsedMonth.year, parsedMonth.month - 1 + delta, 1));
+    return `${shiftedDate.getUTCFullYear()}-${padDatePart(shiftedDate.getUTCMonth() + 1)}`;
+}
+
+function getDaysInMonth(monthKey) {
+    const parsedMonth = parseMonthKey(monthKey);
+    if (!parsedMonth) return 0;
+    return new Date(Date.UTC(parsedMonth.year, parsedMonth.month, 0)).getUTCDate();
+}
+
+function getFirstWeekdayOfMonth(monthKey) {
+    const parsedMonth = parseMonthKey(monthKey);
+    if (!parsedMonth) return 0;
+    return new Date(Date.UTC(parsedMonth.year, parsedMonth.month - 1, 1)).getUTCDay();
+}
+
+function formatMonthLabel(monthKey) {
+    const parsedMonth = parseMonthKey(monthKey);
+    if (!parsedMonth) return monthKey;
+    const displayDate = new Date(Date.UTC(parsedMonth.year, parsedMonth.month - 1, 1));
+    return displayDate.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+function getSpotsLeftLabel(eventAvailability) {
+    if (!eventAvailability || !eventAvailability.exists) return 'Unavailable';
+    if (!Number.isFinite(eventAvailability.remaining)) return 'Unlimited spots left';
+    return `${eventAvailability.remaining} spots left`;
+}
+
 function isTicketProduct(product) {
     if (!product) return false;
     const category = String(product.category || '').toLowerCase();
@@ -439,6 +508,18 @@ function clearEventAvailabilityForProduct(productId) {
     });
 }
 
+function clearEventCalendarForProduct(productId) {
+    const normalizedProductId = String(productId || '').trim();
+    if (!normalizedProductId) return;
+    shopState.eventCalendarByProduct.delete(normalizedProductId);
+}
+
+function getCachedEventCalendarForProduct(productId) {
+    const normalizedProductId = String(productId || '').trim();
+    if (!normalizedProductId) return null;
+    return shopState.eventCalendarByProduct.get(normalizedProductId) || null;
+}
+
 function getStoredEventAvailability(productId, eventDate) {
     if (!productId || !eventDate) return null;
     const key = getEventAvailabilityKey(productId, eventDate);
@@ -532,6 +613,49 @@ async function refreshEventAvailability(product, { showErrors = false } = {}) {
     }
 }
 
+async function fetchEventCalendarAvailability(product) {
+    if (!product || !requiresVisitDate(product)) return new Map();
+
+    const client = getSupabaseClient();
+    const todayIso = getTodayIsoDate();
+    const { data, error } = await client
+        .from(EVENTS_TABLE)
+        .select('id, event_type, event_date, capacity, spots_purchased')
+        .eq('event_type', product.name)
+        .gte('event_date', todayIso)
+        .order('event_date', { ascending: true })
+        .limit(730);
+
+    if (error) {
+        throw new Error(`Could not load calendar availability for ${product.name}: ${error.message}`);
+    }
+
+    const calendarMap = new Map();
+    const rows = Array.isArray(data) ? data : [];
+    rows.forEach((row) => {
+        const normalizedRow = normalizeEventAvailabilityRow(row);
+        if (!normalizedRow || !normalizedRow.eventDate) return;
+        calendarMap.set(normalizedRow.eventDate, normalizedRow);
+        const eventKey = getEventAvailabilityKey(product.id, normalizedRow.eventDate);
+        shopState.eventAvailability.set(eventKey, normalizedRow);
+    });
+
+    return calendarMap;
+}
+
+async function preloadEventCalendar(product, { force = false } = {}) {
+    if (!product || !requiresVisitDate(product)) return new Map();
+
+    const cachedCalendar = getCachedEventCalendarForProduct(product.id);
+    if (cachedCalendar && !force) {
+        return cachedCalendar;
+    }
+
+    const loadedCalendar = await fetchEventCalendarAvailability(product);
+    shopState.eventCalendarByProduct.set(String(product.id || '').trim(), loadedCalendar);
+    return loadedCalendar;
+}
+
 function setTicketDate(productId, value) {
     if (!value) {
         shopState.ticketDates.delete(productId);
@@ -539,6 +663,205 @@ function setTicketDate(productId, value) {
         return;
     }
     shopState.ticketDates.set(productId, value);
+}
+
+async function applyTicketDateSelection(product, selectedDate, { showErrors = true } = {}) {
+    if (!product || !selectedDate) {
+        return { ok: false, reason: 'Please select a valid date.' };
+    }
+
+    try {
+        const calendarMap = await preloadEventCalendar(product);
+        const selectedAvailability = calendarMap.get(selectedDate) || null;
+
+        if (!selectedAvailability || !selectedAvailability.exists) {
+            return { ok: false, reason: `No event is scheduled for ${product.name} on ${selectedDate}.` };
+        }
+
+        if (Number.isFinite(selectedAvailability.remaining) && selectedAvailability.remaining <= 0) {
+            return { ok: false, reason: `${product.name} is fully booked on ${selectedDate}.` };
+        }
+
+        setTicketDate(product.id, selectedDate);
+        const eventKey = getEventAvailabilityKey(product.id, selectedDate);
+        shopState.eventAvailability.set(eventKey, selectedAvailability);
+
+        const quantityInCart = shopState.cart.get(product.id) || 0;
+        if (Number.isFinite(selectedAvailability.remaining) && quantityInCart > selectedAvailability.remaining) {
+            if (selectedAvailability.remaining <= 0) {
+                shopState.cart.delete(product.id);
+                shopState.ticketDates.delete(product.id);
+                clearEventAvailabilityForProduct(product.id);
+            } else {
+                shopState.cart.set(product.id, selectedAvailability.remaining);
+            }
+            return {
+                ok: true,
+                availability: selectedAvailability,
+                adjusted: true,
+                message: `Updated quantity for ${product.name} to match available spots.`
+            };
+        }
+
+        return { ok: true, availability: selectedAvailability, adjusted: false };
+    } catch (error) {
+        if (showErrors) {
+            setFormMessage(error.message || 'Could not load event availability.', 'error');
+        }
+        return { ok: false, reason: error.message || 'Could not load event availability.' };
+    }
+}
+
+function createTicketCalendarGrid(product, monthKey, selectedDate, calendarMap, onSelectDate) {
+    const calendarGrid = document.createElement('div');
+    calendarGrid.className = 'shop-ticket-calendar-grid';
+
+    const weekdayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    weekdayLabels.forEach((weekday) => {
+        const weekdayElement = document.createElement('span');
+        weekdayElement.className = 'shop-ticket-calendar-weekday';
+        weekdayElement.textContent = weekday;
+        calendarGrid.appendChild(weekdayElement);
+    });
+
+    const totalDays = getDaysInMonth(monthKey);
+    const leadingDays = getFirstWeekdayOfMonth(monthKey);
+    const parsedMonth = parseMonthKey(monthKey);
+    if (!parsedMonth) {
+        return calendarGrid;
+    }
+    const todayIso = getTodayIsoDate();
+
+    for (let index = 0; index < leadingDays; index += 1) {
+        const filler = document.createElement('span');
+        filler.className = 'shop-ticket-calendar-day is-empty';
+        filler.setAttribute('aria-hidden', 'true');
+        calendarGrid.appendChild(filler);
+    }
+
+    for (let day = 1; day <= totalDays; day += 1) {
+        const isoDate = buildIsoDate(parsedMonth.year, parsedMonth.month, day);
+        const dayButton = document.createElement('button');
+        dayButton.type = 'button';
+        dayButton.className = 'shop-ticket-calendar-day';
+        dayButton.textContent = String(day);
+
+        const dayAvailability = calendarMap.get(isoDate) || null;
+        const isInPast = isoDate < todayIso;
+        const isAvailable = !isInPast && dayAvailability && dayAvailability.exists
+            && (!Number.isFinite(dayAvailability.remaining) || dayAvailability.remaining > 0);
+
+        if (selectedDate === isoDate) {
+            dayButton.classList.add('is-selected');
+        }
+
+        if (!isAvailable) {
+            dayButton.disabled = true;
+            dayButton.classList.add('is-unavailable');
+        } else {
+            dayButton.addEventListener('click', () => {
+                onSelectDate(isoDate);
+            });
+        }
+
+        calendarGrid.appendChild(dayButton);
+    }
+
+    return calendarGrid;
+}
+
+async function renderTicketDatePopupContent(product, popupRoot) {
+    if (!product || !popupRoot) return;
+
+    const bodyContainer = popupRoot.querySelector('.shop-ticket-date-body');
+    const spotsMessage = popupRoot.querySelector('.shop-ticket-date-spots');
+    const summaryElement = popupRoot.querySelector('.shop-ticket-date-toggle');
+    if (!bodyContainer || !spotsMessage || !summaryElement) return;
+
+    const selectedDate = getTicketDate(product.id);
+    const todayMonth = getMonthKey(getTodayIsoDate());
+    const selectedMonth = getMonthKey(selectedDate);
+    const requestedMonth = String(popupRoot.dataset.monthKey || '').trim();
+    let monthKey = requestedMonth || selectedMonth || todayMonth;
+    if (monthKey < todayMonth) {
+        monthKey = todayMonth;
+    }
+    popupRoot.dataset.monthKey = monthKey;
+
+    bodyContainer.innerHTML = '<p class="shop-ticket-calendar-loading">Loading calendar...</p>';
+
+    let calendarMap;
+    try {
+        calendarMap = await preloadEventCalendar(product, { force: true });
+    } catch (error) {
+        bodyContainer.innerHTML = '<p class="shop-ticket-calendar-loading">Could not load calendar.</p>';
+        spotsMessage.textContent = '';
+        summaryElement.textContent = selectedDate ? `Visit Date: ${selectedDate}` : 'Choose Visit Date';
+        return;
+    }
+
+    if (!popupRoot.isConnected) return;
+
+    bodyContainer.innerHTML = '';
+
+    const nav = document.createElement('div');
+    nav.className = 'shop-ticket-calendar-nav';
+
+    const prevButton = document.createElement('button');
+    prevButton.type = 'button';
+    prevButton.className = 'shop-ticket-calendar-nav-btn';
+    prevButton.textContent = '‹';
+    prevButton.disabled = monthKey <= todayMonth;
+    prevButton.addEventListener('click', async () => {
+        popupRoot.dataset.monthKey = shiftMonthKey(monthKey, -1);
+        await renderTicketDatePopupContent(product, popupRoot);
+    });
+
+    const monthLabel = document.createElement('strong');
+    monthLabel.className = 'shop-ticket-calendar-month';
+    monthLabel.textContent = formatMonthLabel(monthKey);
+
+    const nextButton = document.createElement('button');
+    nextButton.type = 'button';
+    nextButton.className = 'shop-ticket-calendar-nav-btn';
+    nextButton.textContent = '›';
+    nextButton.addEventListener('click', async () => {
+        popupRoot.dataset.monthKey = shiftMonthKey(monthKey, 1);
+        await renderTicketDatePopupContent(product, popupRoot);
+    });
+
+    nav.append(prevButton, monthLabel, nextButton);
+
+    const grid = createTicketCalendarGrid(product, monthKey, selectedDate, calendarMap, async (isoDate) => {
+        const selectionResult = await applyTicketDateSelection(product, isoDate, { showErrors: true });
+        if (!selectionResult.ok) {
+            setFormMessage(selectionResult.reason || 'Unable to select this date.', 'warning');
+            return;
+        }
+
+        const selectedAvailability = selectionResult.availability;
+        const spotsText = getSpotsLeftLabel(selectedAvailability);
+        setFormMessage(selectionResult.adjusted ? selectionResult.message : `Visit date set to ${isoDate}.`, selectionResult.adjusted ? 'warning' : 'success');
+        if (selectedAvailability) {
+            spotsMessage.textContent = spotsText;
+        }
+        renderCart();
+    });
+
+    bodyContainer.append(nav, grid);
+
+    const selectedAvailability = selectedDate ? (calendarMap.get(selectedDate) || getStoredEventAvailability(product.id, selectedDate)) : null;
+    if (selectedDate && selectedAvailability && selectedAvailability.exists) {
+        const spotsLabel = getSpotsLeftLabel(selectedAvailability);
+        summaryElement.textContent = `Visit Date: ${selectedDate} · ${spotsLabel}`;
+        spotsMessage.textContent = spotsLabel;
+    } else if (selectedDate) {
+        summaryElement.textContent = `Visit Date: ${selectedDate}`;
+        spotsMessage.textContent = 'Unavailable date selected.';
+    } else {
+        summaryElement.textContent = 'Choose Visit Date';
+        spotsMessage.textContent = 'Select an available date to see spots left.';
+    }
 }
 
 function getCheckoutForm() {
@@ -836,6 +1159,7 @@ function createQuantityInput(product, quantity) {
             shopState.cart.delete(product.id);
             shopState.ticketDates.delete(product.id);
             clearEventAvailabilityForProduct(product.id);
+            clearEventCalendarForProduct(product.id);
             renderCart();
             return;
         }
@@ -845,6 +1169,7 @@ function createQuantityInput(product, quantity) {
             shopState.cart.delete(product.id);
             shopState.ticketDates.delete(product.id);
             clearEventAvailabilityForProduct(product.id);
+            clearEventCalendarForProduct(product.id);
         } else {
             if (clampedValue !== parsedValue) {
                 setFormMessage(`Max available quantity is ${maxQuantity} for this item.`, 'warning');
@@ -913,6 +1238,7 @@ function renderCart() {
             shopState.cart.delete(product.id);
             shopState.ticketDates.delete(product.id);
             clearEventAvailabilityForProduct(product.id);
+            clearEventCalendarForProduct(product.id);
             renderCart();
         });
 
@@ -925,54 +1251,29 @@ function renderCart() {
             const selectedDate = getTicketDate(product.id);
             const popupSummary = document.createElement('summary');
             popupSummary.className = 'shop-ticket-date-toggle';
-            popupSummary.textContent = selectedDate ? `Visit Date: ${selectedDate}` : 'Choose Visit Date';
+            const selectedAvailability = selectedDate ? getStoredEventAvailability(product.id, selectedDate) : null;
+            popupSummary.textContent = selectedDate && selectedAvailability && selectedAvailability.exists
+                ? `Visit Date: ${selectedDate} · ${getSpotsLeftLabel(selectedAvailability)}`
+                : (selectedDate ? `Visit Date: ${selectedDate}` : 'Choose Visit Date');
 
-            const dateWrapper = document.createElement('label');
-            dateWrapper.className = 'shop-ticket-date-label';
-            dateWrapper.textContent = 'Visit Date';
+            const dateBody = document.createElement('div');
+            dateBody.className = 'shop-ticket-date-body';
 
-            const dateInput = document.createElement('input');
-            dateInput.type = 'date';
-            dateInput.className = 'shop-ticket-date-input';
-            dateInput.min = getTodayIsoDate();
-            dateInput.value = selectedDate;
-            dateInput.addEventListener('change', async () => {
-                setTicketDate(product.id, dateInput.value);
-                const selectedDateValue = getTicketDate(product.id);
-                const eventAvailability = await refreshEventAvailability(product, { showErrors: true });
+            const spotsMessage = document.createElement('p');
+            spotsMessage.className = 'shop-ticket-date-spots';
+            spotsMessage.textContent = selectedDate && selectedAvailability && selectedAvailability.exists
+                ? getSpotsLeftLabel(selectedAvailability)
+                : 'Select an available date to see spots left.';
 
-                if (selectedDateValue && eventAvailability && !eventAvailability.exists) {
-                    shopState.cart.delete(product.id);
-                    shopState.ticketDates.delete(product.id);
-                    clearEventAvailabilityForProduct(product.id);
-                    setFormMessage(`No event is scheduled for ${product.name} on ${selectedDateValue}.`, 'warning');
-                    renderCart();
-                    return;
+            datePopup.addEventListener('toggle', async () => {
+                if (!datePopup.open) return;
+                if (!datePopup.dataset.monthKey) {
+                    datePopup.dataset.monthKey = getMonthKey(selectedDate || getTodayIsoDate());
                 }
-
-                if (eventAvailability && Number.isFinite(eventAvailability.remaining)) {
-                    const quantityInCart = shopState.cart.get(product.id) || 0;
-                    if (quantityInCart > eventAvailability.remaining) {
-                        if (eventAvailability.remaining <= 0) {
-                            shopState.cart.delete(product.id);
-                            shopState.ticketDates.delete(product.id);
-                            clearEventAvailabilityForProduct(product.id);
-                        } else {
-                            shopState.cart.set(product.id, eventAvailability.remaining);
-                        }
-                        setFormMessage(`Updated quantity for ${product.name} to match available spots.`, 'warning');
-                    } else {
-                        setFormMessage('');
-                    }
-                } else {
-                    setFormMessage('');
-                }
-
-                renderCart();
+                await renderTicketDatePopupContent(product, datePopup);
             });
 
-            dateWrapper.appendChild(dateInput);
-            datePopup.append(popupSummary, dateWrapper);
+            datePopup.append(popupSummary, dateBody, spotsMessage);
             details.appendChild(datePopup);
         }
 
@@ -1005,27 +1306,39 @@ async function addToCart(productId) {
     shopState.cart.set(productId, existingQuantity + 1);
 
     if (requiresVisitDate(product) && !getTicketDate(product.id)) {
-        const defaultDate = getTodayIsoDate();
+        let calendarMap;
+        try {
+            calendarMap = await preloadEventCalendar(product, { force: true });
+        } catch (error) {
+            shopState.cart.delete(product.id);
+            clearEventAvailabilityForProduct(product.id);
+            clearEventCalendarForProduct(product.id);
+            setFormMessage(error.message || `Could not load available dates for ${product.name}.`, 'error');
+            renderCart();
+            return;
+        }
+
+        const firstAvailableEntry = Array.from(calendarMap.entries()).find(([, availability]) => {
+            if (!availability || !availability.exists) return false;
+            return !Number.isFinite(availability.remaining) || availability.remaining > 0;
+        }) || null;
+
+        if (!firstAvailableEntry) {
+            shopState.cart.delete(product.id);
+            clearEventAvailabilityForProduct(product.id);
+            clearEventCalendarForProduct(product.id);
+            setFormMessage(`No available event dates were found for ${product.name}.`, 'warning');
+            renderCart();
+            return;
+        }
+
+        const [defaultDate, defaultAvailability] = firstAvailableEntry;
         setTicketDate(product.id, defaultDate);
-
-        const defaultAvailability = await refreshEventAvailability(product, { showErrors: false });
-        if (!defaultAvailability || !defaultAvailability.exists) {
-            shopState.cart.delete(product.id);
-            shopState.ticketDates.delete(product.id);
-            clearEventAvailabilityForProduct(product.id);
-            setFormMessage(`No event is scheduled for ${product.name} on ${defaultDate}. Choose another date in the calendar popup.`, 'warning');
-            renderCart();
-            return;
-        }
-
-        if (Number.isFinite(defaultAvailability.remaining) && defaultAvailability.remaining <= 0) {
-            shopState.cart.delete(product.id);
-            shopState.ticketDates.delete(product.id);
-            clearEventAvailabilityForProduct(product.id);
-            setFormMessage(`${product.name} is fully booked on ${defaultDate}. Choose another date in the calendar popup.`, 'warning');
-            renderCart();
-            return;
-        }
+        const eventKey = getEventAvailabilityKey(product.id, defaultDate);
+        shopState.eventAvailability.set(eventKey, defaultAvailability);
+        setFormMessage(`Item added to cart. ${defaultDate} selected with ${getSpotsLeftLabel(defaultAvailability)}.`, 'success');
+        renderCart();
+        return;
     }
 
     setFormMessage('Item added to cart.', 'success');
@@ -1319,6 +1632,7 @@ function startNewOrder() {
     shopState.isCheckoutComplete = false;
     shopState.ticketDates.clear();
     shopState.eventAvailability.clear();
+    shopState.eventCalendarByProduct.clear();
     clearAppliedPromotion();
     const form = getCheckoutForm();
     if (form) {
@@ -1470,6 +1784,8 @@ function attachCheckoutHandler() {
         shopState.isCheckoutComplete = true;
         shopState.cart.clear();
         shopState.ticketDates.clear();
+        shopState.eventAvailability.clear();
+        shopState.eventCalendarByProduct.clear();
         clearAppliedPromotion();
         setPromoMessage('');
         setCheckoutInputsDisabled(true);
@@ -1606,6 +1922,7 @@ async function initializeShopPage() {
     shopState.cart = new Map();
     shopState.ticketDates = new Map();
     shopState.eventAvailability = new Map();
+    shopState.eventCalendarByProduct = new Map();
     shopState.roundToNearestDollar = false;
     shopState.appliedPromotion = null;
     shopState.isCheckoutComplete = false;
@@ -1644,6 +1961,7 @@ async function initializeShopPage() {
         shopState.cart.clear();
         shopState.ticketDates.clear();
         shopState.eventAvailability.clear();
+        shopState.eventCalendarByProduct.clear();
         setProductsLoadError();
         setCheckoutInputsDisabled(true);
         setFormMessage('Checkout is unavailable until products load.', 'error');

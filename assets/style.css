@@ -954,6 +954,93 @@ footer {
     margin-top: 0;
 }
 
+.shop-ticket-date-body {
+    margin-top: 2px;
+}
+
+.shop-ticket-date-spots {
+    margin-top: 8px;
+    color: var(--secondary-text);
+    font-size: 0.8rem;
+}
+
+.shop-ticket-calendar-loading {
+    color: var(--secondary-text);
+    font-size: 0.8rem;
+    padding: 8px 0;
+}
+
+.shop-ticket-calendar-nav {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.shop-ticket-calendar-month {
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--text-color);
+}
+
+.shop-ticket-calendar-nav-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--card-border);
+    background: rgba(255, 210, 122, 0.08);
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.shop-ticket-calendar-nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.shop-ticket-calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+}
+
+.shop-ticket-calendar-weekday {
+    color: var(--secondary-text);
+    font-size: 0.72rem;
+    text-align: center;
+    opacity: 0.9;
+}
+
+.shop-ticket-calendar-day {
+    width: 100%;
+    min-height: 28px;
+    border: 1px solid var(--card-border);
+    background: rgba(255, 210, 122, 0.08);
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 0.78rem;
+}
+
+.shop-ticket-calendar-day.is-empty {
+    border-color: transparent;
+    background: transparent;
+    pointer-events: none;
+}
+
+.shop-ticket-calendar-day.is-unavailable,
+.shop-ticket-calendar-day:disabled {
+    background: rgba(30, 30, 30, 0.45);
+    color: rgba(206, 183, 135, 0.45);
+    border-color: rgba(255, 210, 122, 0.18);
+    cursor: not-allowed;
+}
+
+.shop-ticket-calendar-day.is-selected {
+    border-color: rgba(255, 210, 122, 0.8);
+    box-shadow: 0 0 0 1px rgba(255, 210, 122, 0.35) inset;
+    background: rgba(255, 210, 122, 0.2);
+}
+
 .shop-ticket-date-input {
     border: 1px solid var(--card-border);
     background: rgba(30, 30, 30, 0.92);
