@@ -362,6 +362,13 @@ function normalizeText(value) {
     return String(value || '').trim().toLowerCase();
 }
 
+function normalizeComparableName(value) {
+    return normalizeText(value)
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 function getRowFieldValue(row, fieldNames) {
     if (!row || typeof row !== 'object') return undefined;
     for (const fieldName of fieldNames) {
@@ -393,10 +400,10 @@ function normalizeDateValueToIso(rawDateValue) {
 }
 
 function matchesEventProduct(product, eventTypeValue) {
-    const normalizedEventType = normalizeText(eventTypeValue);
+    const normalizedEventType = normalizeComparableName(eventTypeValue);
     if (!normalizedEventType) return false;
-    return normalizedEventType === normalizeText(product.name)
-        || normalizedEventType === normalizeText(product.id);
+    const normalizedProductName = normalizeComparableName(product && product.name);
+    return normalizedEventType === normalizedProductName;
 }
 
 function isTicketProduct(product) {
@@ -607,6 +614,27 @@ function normalizeEventAvailabilityRow(row) {
     };
 }
 
+function selectPreferredAvailability(currentAvailability, nextAvailability) {
+    if (!currentAvailability) return nextAvailability;
+    if (!nextAvailability) return currentAvailability;
+
+    const currentRemaining = currentAvailability.remaining;
+    const nextRemaining = nextAvailability.remaining;
+
+    if (!Number.isFinite(currentRemaining) && Number.isFinite(nextRemaining)) {
+        return currentAvailability;
+    }
+    if (Number.isFinite(currentRemaining) && !Number.isFinite(nextRemaining)) {
+        return nextAvailability;
+    }
+
+    if (nextRemaining > currentRemaining) {
+        return nextAvailability;
+    }
+
+    return currentAvailability;
+}
+
 async function fetchEventAvailability(product, eventDate) {
     if (!product || !eventDate || !requiresVisitDate(product)) return null;
 
@@ -669,9 +697,15 @@ async function fetchEventCalendarAvailability(product) {
         if (!normalizedRow || !normalizedRow.eventDate) return;
         if (!matchesEventProduct(product, normalizedRow.eventType)) return;
         if (normalizedRow.eventDate < todayIso) return;
-        calendarMap.set(normalizedRow.eventDate, normalizedRow);
-        const eventKey = getEventAvailabilityKey(product.id, normalizedRow.eventDate);
-        shopState.eventAvailability.set(eventKey, normalizedRow);
+
+        const existingEntry = calendarMap.get(normalizedRow.eventDate) || null;
+        const preferredEntry = selectPreferredAvailability(existingEntry, normalizedRow);
+        calendarMap.set(normalizedRow.eventDate, preferredEntry);
+    });
+
+    calendarMap.forEach((availability, eventDate) => {
+        const eventKey = getEventAvailabilityKey(product.id, eventDate);
+        shopState.eventAvailability.set(eventKey, availability);
     });
 
     return calendarMap;
