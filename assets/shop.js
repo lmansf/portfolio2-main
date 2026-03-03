@@ -414,10 +414,7 @@ function isTicketProduct(product) {
 }
 
 function requiresVisitDate(product) {
-    if (!product) return false;
-    const category = String(product.category || '').toLowerCase();
-    const name = String(product.name || '').toLowerCase();
-    return category === 'experience' || /ticket|tour|workshop/.test(name);
+    return isTicketProduct(product);
 }
 
 function isUnlimitedInventoryValue(value) {
@@ -467,30 +464,11 @@ function getInventoryLimit(product) {
         return Math.max(0, Math.floor(Number(eventAvailability.remaining) || 0));
     }
 
-    const sourceValue = isTicketProduct(product) ? product.capacity : product.stock;
+    const sourceValue = product.stock;
     const parsedValue = Number(sourceValue);
     if (!Number.isFinite(parsedValue)) return 0;
     if (isUnlimitedInventoryValue(parsedValue)) return Number.POSITIVE_INFINITY;
     return Math.max(0, Math.floor(parsedValue));
-}
-
-function setInventoryLimit(product, nextValue) {
-    if (!product) return;
-    if (isUnlimitedInventoryValue(nextValue)) {
-        if (isTicketProduct(product)) {
-            product.capacity = -1;
-            return;
-        }
-        product.stock = -1;
-        return;
-    }
-
-    const sanitizedValue = Math.max(0, Math.floor(Number(nextValue) || 0));
-    if (isTicketProduct(product)) {
-        product.capacity = sanitizedValue;
-        return;
-    }
-    product.stock = sanitizedValue;
 }
 
 function getRemainingQuantity(product) {
@@ -1833,7 +1811,6 @@ async function applyOrderInventoryReduction() {
 
         if (isUnlimitedInventoryValue(currentStock)) {
             product.stock = -1;
-            product.capacity = -1;
             continue;
         }
 
@@ -1859,7 +1836,6 @@ async function applyOrderInventoryReduction() {
         }
 
         product.stock = nextStock;
-        product.capacity = nextStock;
     }
 }
 
