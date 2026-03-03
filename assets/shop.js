@@ -3,6 +3,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_K5k9vLXtDUo8qoyWrwX3qg_qN_3xWfy';
 const SHOP_PRODUCTS_TABLE = 'products';
 const TRANSACTIONS_TABLE = 'transactions';
 const VISIT_DATES_TABLE = 'visit_dates';
+const EVENTS_TABLE = 'events';
 const PROMOTIONS_TABLE = 'promotions';
 const SHOP_PRODUCTS_CACHE_KEY = 'portfolio_shop_products_cache_v2';
 const SHOP_PRODUCTS_CACHE_TIME_KEY = 'portfolio_shop_products_cache_time_v2';
@@ -27,6 +28,7 @@ const shopState = {
     products: [],
     cart: new Map(),
     ticketDates: new Map(),
+    eventAvailability: new Map(),
     roundToNearestDollar: false,
     appliedPromotion: null,
     isCheckoutComplete: false
@@ -329,6 +331,25 @@ function shouldShowAvailability(product) {
 
 function getInventoryLimit(product) {
     if (!product) return 0;
+
+    if (requiresVisitDate(product)) {
+        const eventDate = getTicketDate(product.id);
+        if (!eventDate) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        const eventAvailability = getStoredEventAvailability(product.id, eventDate);
+        if (!eventAvailability || !eventAvailability.exists) {
+            return 0;
+        }
+
+        if (!Number.isFinite(eventAvailability.remaining)) {
+            return Number.POSITIVE_INFINITY;
+        }
+
+        return Math.max(0, Math.floor(Number(eventAvailability.remaining) || 0));
+    }
+
     const sourceValue = isTicketProduct(product) ? product.capacity : product.stock;
     const parsedValue = Number(sourceValue);
     if (!Number.isFinite(parsedValue)) return 0;
@@ -366,6 +387,29 @@ function getRemainingQuantity(product) {
 
 function getAvailabilityText(product) {
     if (!product || !shouldShowAvailability(product)) return '';
+
+    if (requiresVisitDate(product)) {
+        const eventDate = getTicketDate(product.id);
+        if (!eventDate) {
+            return 'Select a visit date in your cart for availability';
+        }
+
+        const eventAvailability = getStoredEventAvailability(product.id, eventDate);
+        if (!eventAvailability) {
+            return 'Checking event availability...';
+        }
+
+        if (!eventAvailability.exists) {
+            return 'No event scheduled for selected date';
+        }
+
+        if (!Number.isFinite(eventAvailability.remaining)) {
+            return 'Unlimited spots';
+        }
+
+        return `${eventAvailability.remaining} spots left`;
+    }
+
     if (!Number.isFinite(getInventoryLimit(product))) {
         return isTicketProduct(product) ? 'Unlimited spots' : 'Unlimited stock';
     }
@@ -378,9 +422,120 @@ function getTicketDate(productId) {
     return shopState.ticketDates.get(productId) || '';
 }
 
+function getEventAvailabilityKey(productId, eventDate) {
+    return `${String(productId || '').trim()}::${String(eventDate || '').trim()}`;
+}
+
+function clearEventAvailabilityForProduct(productId) {
+    const normalizedProductId = String(productId || '').trim();
+    if (!normalizedProductId) return;
+
+    const keysToDelete = Array.from(shopState.eventAvailability.keys()).filter((key) => {
+        return key.startsWith(`${normalizedProductId}::`);
+    });
+
+    keysToDelete.forEach((key) => {
+        shopState.eventAvailability.delete(key);
+    });
+}
+
+function getStoredEventAvailability(productId, eventDate) {
+    if (!productId || !eventDate) return null;
+    const key = getEventAvailabilityKey(productId, eventDate);
+    return shopState.eventAvailability.get(key) || null;
+}
+
+function normalizeEventAvailabilityRow(row) {
+    if (!row) return null;
+
+    const capacityRaw = Number(row.capacity);
+    const spotsPurchasedRaw = Number(row.spots_purchased);
+    if (!Number.isFinite(capacityRaw) || !Number.isFinite(spotsPurchasedRaw)) {
+        return null;
+    }
+
+    const isUnlimited = isUnlimitedInventoryValue(capacityRaw);
+    const normalizedCapacity = isUnlimited ? -1 : Math.max(0, Math.floor(capacityRaw));
+    const normalizedPurchased = Math.max(0, Math.floor(spotsPurchasedRaw));
+    if (!isUnlimited && normalizedPurchased > normalizedCapacity) {
+        return null;
+    }
+
+    const remaining = isUnlimited
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, normalizedCapacity - normalizedPurchased);
+
+    return {
+        id: String(row.id || '').trim(),
+        eventType: String(row.event_type || '').trim(),
+        eventDate: String(row.event_date || '').trim(),
+        capacity: normalizedCapacity,
+        spotsPurchased: normalizedPurchased,
+        remaining,
+        exists: true
+    };
+}
+
+async function fetchEventAvailability(product, eventDate) {
+    if (!product || !eventDate || !requiresVisitDate(product)) return null;
+
+    const client = getSupabaseClient();
+    const { data, error } = await client
+        .from(EVENTS_TABLE)
+        .select('id, event_type, event_date, capacity, spots_purchased')
+        .eq('event_type', product.name)
+        .eq('event_date', eventDate)
+        .limit(1)
+        .maybeSingle();
+
+    if (error) {
+        throw new Error(`Could not load event availability for ${product.name}: ${error.message}`);
+    }
+
+    if (!data) {
+        return {
+            id: '',
+            eventType: product.name,
+            eventDate,
+            capacity: 0,
+            spotsPurchased: 0,
+            remaining: 0,
+            exists: false
+        };
+    }
+
+    const normalizedEvent = normalizeEventAvailabilityRow(data);
+    if (!normalizedEvent) {
+        throw new Error(`Event data is invalid for ${product.name} on ${eventDate}.`);
+    }
+
+    return normalizedEvent;
+}
+
+async function refreshEventAvailability(product, { showErrors = false } = {}) {
+    if (!product || !requiresVisitDate(product)) return null;
+
+    const eventDate = getTicketDate(product.id);
+    clearEventAvailabilityForProduct(product.id);
+    if (!eventDate) return null;
+
+    try {
+        const availability = await fetchEventAvailability(product, eventDate);
+        const key = getEventAvailabilityKey(product.id, eventDate);
+        shopState.eventAvailability.set(key, availability);
+        return availability;
+    } catch (error) {
+        if (showErrors) {
+            setFormMessage(error.message || 'Could not load event availability.', 'error');
+        }
+        return null;
+    }
+}
+
 function setTicketDate(productId, value) {
     if (!value) {
         shopState.ticketDates.delete(productId);
+        clearEventAvailabilityForProduct(productId);
         return;
     }
     shopState.ticketDates.set(productId, value);
@@ -680,6 +835,7 @@ function createQuantityInput(product, quantity) {
         if (!Number.isFinite(parsedValue) || parsedValue < 1) {
             shopState.cart.delete(product.id);
             shopState.ticketDates.delete(product.id);
+            clearEventAvailabilityForProduct(product.id);
             renderCart();
             return;
         }
@@ -688,6 +844,7 @@ function createQuantityInput(product, quantity) {
         if (clampedValue <= 0) {
             shopState.cart.delete(product.id);
             shopState.ticketDates.delete(product.id);
+            clearEventAvailabilityForProduct(product.id);
         } else {
             if (clampedValue !== parsedValue) {
                 setFormMessage(`Max available quantity is ${maxQuantity} for this item.`, 'warning');
@@ -755,6 +912,7 @@ function renderCart() {
         removeButton.addEventListener('click', () => {
             shopState.cart.delete(product.id);
             shopState.ticketDates.delete(product.id);
+            clearEventAvailabilityForProduct(product.id);
             renderCart();
         });
 
@@ -770,9 +928,39 @@ function renderCart() {
             dateInput.className = 'shop-ticket-date-input';
             dateInput.min = getTodayIsoDate();
             dateInput.value = getTicketDate(product.id);
-            dateInput.addEventListener('change', () => {
+            dateInput.addEventListener('change', async () => {
                 setTicketDate(product.id, dateInput.value);
-                setFormMessage('');
+                const selectedDate = getTicketDate(product.id);
+                const eventAvailability = await refreshEventAvailability(product, { showErrors: true });
+
+                if (selectedDate && eventAvailability && !eventAvailability.exists) {
+                    shopState.cart.delete(product.id);
+                    shopState.ticketDates.delete(product.id);
+                    clearEventAvailabilityForProduct(product.id);
+                    setFormMessage(`No event is scheduled for ${product.name} on ${selectedDate}.`, 'warning');
+                    renderCart();
+                    return;
+                }
+
+                if (eventAvailability && Number.isFinite(eventAvailability.remaining)) {
+                    const quantityInCart = shopState.cart.get(product.id) || 0;
+                    if (quantityInCart > eventAvailability.remaining) {
+                        if (eventAvailability.remaining <= 0) {
+                            shopState.cart.delete(product.id);
+                            shopState.ticketDates.delete(product.id);
+                            clearEventAvailabilityForProduct(product.id);
+                        } else {
+                            shopState.cart.set(product.id, eventAvailability.remaining);
+                        }
+                        setFormMessage(`Updated quantity for ${product.name} to match available spots.`, 'warning');
+                    } else {
+                        setFormMessage('');
+                    }
+                } else {
+                    setFormMessage('');
+                }
+
+                renderCart();
             });
 
             dateWrapper.appendChild(dateInput);
@@ -943,6 +1131,9 @@ function validateCheckoutForm(form) {
     }
 
     const invalidInventory = getCartEntries().find(({ product, quantity }) => {
+        if (requiresVisitDate(product)) {
+            return false;
+        }
         const inventoryLimit = getInventoryLimit(product);
         if (!Number.isFinite(inventoryLimit)) {
             return false;
@@ -974,6 +1165,71 @@ async function applyOrderInventoryReduction() {
     const cartEntries = getCartEntries();
 
     for (const { product, quantity } of cartEntries) {
+        if (requiresVisitDate(product)) {
+            const visitDate = getTicketDate(product.id);
+            if (!visitDate) {
+                throw new Error(`Select a visit date for ${product.name}.`);
+            }
+
+            const { data: currentEventRow, error: readEventError } = await client
+                .from(EVENTS_TABLE)
+                .select('id, event_type, event_date, capacity, spots_purchased')
+                .eq('event_type', product.name)
+                .eq('event_date', visitDate)
+                .limit(1)
+                .maybeSingle();
+
+            if (readEventError) {
+                throw new Error(`Could not verify event capacity for ${product.name}: ${readEventError.message}`);
+            }
+
+            if (!currentEventRow) {
+                throw new Error(`No event is scheduled for ${product.name} on ${visitDate}.`);
+            }
+
+            const normalizedEvent = normalizeEventAvailabilityRow(currentEventRow);
+            if (!normalizedEvent) {
+                throw new Error(`Event data is invalid for ${product.name} on ${visitDate}.`);
+            }
+
+            if (Number.isFinite(normalizedEvent.remaining) && normalizedEvent.remaining < quantity) {
+                throw new Error(`Not enough spots for ${product.name} on ${visitDate}. Available: ${normalizedEvent.remaining}.`);
+            }
+
+            if (!isUnlimitedInventoryValue(normalizedEvent.capacity)) {
+                const nextSpotsPurchased = normalizedEvent.spotsPurchased + quantity;
+                if (nextSpotsPurchased > normalizedEvent.capacity) {
+                    throw new Error(`Requested quantity exceeds capacity for ${product.name} on ${visitDate}.`);
+                }
+
+                const { data: updatedEventRow, error: updateEventError } = await client
+                    .from(EVENTS_TABLE)
+                    .update({ spots_purchased: nextSpotsPurchased })
+                    .eq('id', normalizedEvent.id)
+                    .eq('spots_purchased', normalizedEvent.spotsPurchased)
+                    .select('id, event_type, event_date, capacity, spots_purchased')
+                    .maybeSingle();
+
+                if (updateEventError) {
+                    throw new Error(`Could not update event capacity for ${product.name}: ${updateEventError.message}`);
+                }
+
+                if (!updatedEventRow) {
+                    throw new Error(`Availability changed for ${product.name} on ${visitDate} while checking out. Please try again.`);
+                }
+
+                const updatedAvailability = normalizeEventAvailabilityRow(updatedEventRow);
+                if (!updatedAvailability) {
+                    throw new Error(`Event data was invalid after update for ${product.name} on ${visitDate}.`);
+                }
+
+                const eventKey = getEventAvailabilityKey(product.id, visitDate);
+                shopState.eventAvailability.set(eventKey, updatedAvailability);
+            }
+
+            continue;
+        }
+
         const { data: currentRow, error: readError } = await client
             .from(SHOP_PRODUCTS_TABLE)
             .select('id, stock')
@@ -1028,6 +1284,7 @@ async function applyOrderInventoryReduction() {
 function startNewOrder() {
     shopState.isCheckoutComplete = false;
     shopState.ticketDates.clear();
+    shopState.eventAvailability.clear();
     clearAppliedPromotion();
     const form = getCheckoutForm();
     if (form) {
@@ -1314,6 +1571,7 @@ async function initializeShopPage() {
     shopState.products = [];
     shopState.cart = new Map();
     shopState.ticketDates = new Map();
+    shopState.eventAvailability = new Map();
     shopState.roundToNearestDollar = false;
     shopState.appliedPromotion = null;
     shopState.isCheckoutComplete = false;
@@ -1351,6 +1609,7 @@ async function initializeShopPage() {
         shopState.products = [];
         shopState.cart.clear();
         shopState.ticketDates.clear();
+        shopState.eventAvailability.clear();
         setProductsLoadError();
         setCheckoutInputsDisabled(true);
         setFormMessage('Checkout is unavailable until products load.', 'error');
