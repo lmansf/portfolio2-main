@@ -919,6 +919,14 @@ function renderCart() {
         controls.append(quantityInput, lineTotalElement, removeButton);
 
         if (requiresVisitDate(product)) {
+            const datePopup = document.createElement('details');
+            datePopup.className = 'shop-ticket-date-popup';
+
+            const selectedDate = getTicketDate(product.id);
+            const popupSummary = document.createElement('summary');
+            popupSummary.className = 'shop-ticket-date-toggle';
+            popupSummary.textContent = selectedDate ? `Visit Date: ${selectedDate}` : 'Choose Visit Date';
+
             const dateWrapper = document.createElement('label');
             dateWrapper.className = 'shop-ticket-date-label';
             dateWrapper.textContent = 'Visit Date';
@@ -927,17 +935,17 @@ function renderCart() {
             dateInput.type = 'date';
             dateInput.className = 'shop-ticket-date-input';
             dateInput.min = getTodayIsoDate();
-            dateInput.value = getTicketDate(product.id);
+            dateInput.value = selectedDate;
             dateInput.addEventListener('change', async () => {
                 setTicketDate(product.id, dateInput.value);
-                const selectedDate = getTicketDate(product.id);
+                const selectedDateValue = getTicketDate(product.id);
                 const eventAvailability = await refreshEventAvailability(product, { showErrors: true });
 
-                if (selectedDate && eventAvailability && !eventAvailability.exists) {
+                if (selectedDateValue && eventAvailability && !eventAvailability.exists) {
                     shopState.cart.delete(product.id);
                     shopState.ticketDates.delete(product.id);
                     clearEventAvailabilityForProduct(product.id);
-                    setFormMessage(`No event is scheduled for ${product.name} on ${selectedDate}.`, 'warning');
+                    setFormMessage(`No event is scheduled for ${product.name} on ${selectedDateValue}.`, 'warning');
                     renderCart();
                     return;
                 }
@@ -964,7 +972,8 @@ function renderCart() {
             });
 
             dateWrapper.appendChild(dateInput);
-            details.appendChild(dateWrapper);
+            datePopup.append(popupSummary, dateWrapper);
+            details.appendChild(datePopup);
         }
 
         row.append(details, controls);
@@ -975,7 +984,7 @@ function renderCart() {
     renderProducts();
 }
 
-function addToCart(productId) {
+async function addToCart(productId) {
     if (shopState.isCheckoutComplete) {
         setFormMessage('Start a new order before adding more items.', 'warning');
         return;
@@ -994,6 +1003,31 @@ function addToCart(productId) {
 
     const existingQuantity = shopState.cart.get(productId) || 0;
     shopState.cart.set(productId, existingQuantity + 1);
+
+    if (requiresVisitDate(product) && !getTicketDate(product.id)) {
+        const defaultDate = getTodayIsoDate();
+        setTicketDate(product.id, defaultDate);
+
+        const defaultAvailability = await refreshEventAvailability(product, { showErrors: false });
+        if (!defaultAvailability || !defaultAvailability.exists) {
+            shopState.cart.delete(product.id);
+            shopState.ticketDates.delete(product.id);
+            clearEventAvailabilityForProduct(product.id);
+            setFormMessage(`No event is scheduled for ${product.name} on ${defaultDate}. Choose another date in the calendar popup.`, 'warning');
+            renderCart();
+            return;
+        }
+
+        if (Number.isFinite(defaultAvailability.remaining) && defaultAvailability.remaining <= 0) {
+            shopState.cart.delete(product.id);
+            shopState.ticketDates.delete(product.id);
+            clearEventAvailabilityForProduct(product.id);
+            setFormMessage(`${product.name} is fully booked on ${defaultDate}. Choose another date in the calendar popup.`, 'warning');
+            renderCart();
+            return;
+        }
+    }
+
     setFormMessage('Item added to cart.', 'success');
     renderCart();
 }

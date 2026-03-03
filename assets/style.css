@@ -927,6 +927,33 @@ footer {
     font-size: 0.8rem;
 }
 
+.shop-ticket-date-popup {
+    margin-top: 10px;
+    border: 1px solid var(--card-border);
+    background: rgba(255, 210, 122, 0.04);
+}
+
+.shop-ticket-date-popup[open] {
+    padding: 0 10px 10px;
+}
+
+.shop-ticket-date-toggle {
+    list-style: none;
+    cursor: pointer;
+    padding: 8px 10px;
+    color: var(--secondary-text);
+    font-size: 0.82rem;
+    user-select: none;
+}
+
+.shop-ticket-date-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.shop-ticket-date-popup .shop-ticket-date-label {
+    margin-top: 0;
+}
+
 .shop-ticket-date-input {
     border: 1px solid var(--card-border);
     background: rgba(30, 30, 30, 0.92);
