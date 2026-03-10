@@ -11,6 +11,7 @@ The website has three core views:
 - **Blog page** (`blog.html`) — blog content powered by frontend JavaScript.
 - **Mock Shop page** (`shop.html`) — product catalog loaded from Supabase.
 
+# Featured Project: Agentic Webstore Ecosystem
 # Task 1: Create an E-Commerce Store
 Goal: Create a fully working E-Commerce webstore without contributing any direct 
 ## Task 1a: Create the Database
