@@ -48,7 +48,7 @@ About the Solution
 	In this workflow I was experimenting with using kimi-k2 as the agent, as well as a secondary agent whose role was to challenge my first agents decision. The critique evaluated the results against the original inputs (products, visit count, date), and redistributes the original decision to better reflect the environment. This is a placeholder for the true dynamic pricing system to be developed in the Data Scientist Task that remains.
 	
 	Scheduled to run twice a day.
-![Dashboard Visual](Dynamic_Pricing.png)
+![Dashboard Visual](DynamicPricing.png)
 # Task 3: Build a Pipeline for Streaming Data
 Goal: create the pipelines to extract, transform, and load data specializing in business analytics and machine learning.
 Responsibility: Data Engineer
