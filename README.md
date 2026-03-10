@@ -62,6 +62,8 @@ Responsibility: Data Engineer
 ## Task 3a: Create the Business Analytics Data Pipeline
 About the Solution
 	Collects weather data from an api and loads it alongside ticket sales from a supabase transaction table. Aggregated by date, and then loaded into tables that refresh once a day using dagster.
+![Dashboard Visual](GlobalAssetLineage.png)
+![Dashboard Visual](Assets.png)
 ## Task 3b: Create the Machine Learning Pipeline (Coming Soon)
 About the Solution
 	Coming Soon!'
