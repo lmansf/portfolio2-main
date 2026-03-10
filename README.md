@@ -1,6 +1,6 @@
 # Portfolio Website
 
-This repository contains a portfolio website. The site is designed to be lightweight, fast, and easy to deploy, using plain HTML, CSS, and JavaScript.
+The site is designed to be lightweight, fast, and easy to deploy, using plain HTML, CSS, and JavaScript.
 
 ## Website Overview
 
