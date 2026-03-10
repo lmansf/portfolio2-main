@@ -69,7 +69,7 @@ Responsibility: Data Analyst
 - Power Bi
 About the Solution
 	Visualizes the potential impact of temperature and weather on ticket sales.
-![Dashboard Visual](whole_dashboard)
+![Dashboard Visual](whole_dashboard.png)
 # Task 5: Dynamic Pricing (Coming Soon)
 Goal: To develop a machine learning model based on actual transaction data to price tickets in realtime.
 ## Task 5a: Model the Historical Data
