@@ -112,14 +112,36 @@
         .arch-frame {
             padding: 0;
             overflow: hidden;
-            min-height: 74vh;
+            min-height: 88vh;
         }
 
         .arch-frame iframe {
             width: 100%;
-            min-height: 74vh;
+            height: 88vh;
+            min-height: 720px;
             border: 0;
             display: block;
+        }
+
+        .arch-frame-wrap {
+            width: min(1500px, 96vw);
+            margin: 0 auto;
+        }
+
+        .arch-frame-note {
+            margin: 0.2rem 0 0.75rem;
+            text-align: right;
+        }
+
+        .arch-frame-note a {
+            color: var(--accent-color);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s ease;
+        }
+
+        .arch-frame-note a:hover {
+            border-color: var(--accent-color);
         }
 
         @media (max-width: 980px) {
@@ -229,13 +251,18 @@
                 <p class="section-note">Infographic generated with Claude Opus 4.6.</p>
             </section>
 
-            <section class="content-panel arch-frame">
-                <iframe
-                    title="Owl Park Data Architecture"
-                    src="owl-park-infographic.html"
-                    loading="lazy"
-                ></iframe>
-            </section>
+            <div class="arch-frame-wrap">
+                <p class="arch-frame-note">
+                    <a href="owl-park-infographic.html" target="_blank" rel="noopener noreferrer">Open infographic full size ↗</a>
+                </p>
+                <section class="content-panel arch-frame">
+                    <iframe
+                        title="Owl Park Data Architecture"
+                        src="owl-park-infographic.html"
+                        loading="lazy"
+                    ></iframe>
+                </section>
+            </div>
         </div>
     </main>
 
