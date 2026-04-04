@@ -12,68 +12,85 @@
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
     <style>
-        .architecture-view {
-            width: min(1160px, 100%);
-            margin: 0 auto;
-            display: grid;
-            gap: 1rem;
-            padding-bottom: 1.5rem;
+        /* ── Architecture page layout ── */
+        .arch-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.25rem;
+            padding-bottom: 2rem;
         }
 
-        .architecture-view .content-panel {
-            padding: 1.2rem;
+        /* Shared panel sizing */
+        .arch-page .content-panel {
+            width: min(1100px, 92vw);
+            padding: 1.4rem 1.6rem;
+        }
+
+        /* ── Hero ── */
+        .arch-hero {
+            text-align: center;
         }
 
         .arch-hero h1 {
-            font-size: clamp(1.8rem, 3.4vw, 2.8rem);
-            line-height: 1.1;
-            margin-bottom: 0.5rem;
+            font-size: clamp(1.8rem, 3.4vw, 2.6rem);
+            line-height: 1.15;
+            margin-bottom: 0.45rem;
         }
 
         .arch-hero p {
             color: #e7d4aa;
-            max-width: 74ch;
+            max-width: 64ch;
+            margin: 0 auto;
             line-height: 1.5;
         }
 
-        .arch-kpis {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 0.75rem;
-            margin-top: 1rem;
+        .arch-hero .section-note {
+            font-size: 0.88rem;
+            max-width: 64ch;
+            margin: 0.75rem auto 0;
         }
 
-        .arch-kpi {
-            border: 1px solid var(--card-border);
-            background: rgba(255, 210, 122, 0.07);
-            padding: 0.7rem 0.8rem;
+        /* ── Infographic embed ── */
+        .arch-frame-wrap {
+            width: min(1500px, 96vw);
         }
 
-        .arch-kpi strong {
+        .arch-frame-note {
+            text-align: right;
+            margin-bottom: 0.35rem;
+            font-size: 0.85rem;
+        }
+
+        .arch-frame-note a {
+            color: var(--accent-color);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .arch-frame-note a:hover {
+            border-color: var(--accent-color);
+        }
+
+        .arch-frame {
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .arch-frame iframe {
+            width: 100%;
+            height: 88vh;
+            min-height: 720px;
+            border: 0;
             display: block;
-            font-size: 0.95rem;
-            margin-bottom: 0.2rem;
         }
 
-        .arch-kpi span {
-            color: var(--secondary-text);
-            font-size: 0.86rem;
-            line-height: 1.3;
-        }
-
+        /* ── Supporting detail sections ── */
         .arch-section h2 {
-            font-size: 1.45rem;
-            margin-bottom: 0.6rem;
-        }
-
-        .arch-list {
-            padding-left: 1.1rem;
-            color: #ead7ae;
-            line-height: 1.45;
-        }
-
-        .arch-list li + li {
-            margin-top: 0.35rem;
+            font-size: 1.35rem;
+            margin-bottom: 0.5rem;
         }
 
         .phase-grid {
@@ -90,7 +107,7 @@
 
         .phase-card h3 {
             font-size: 1rem;
-            margin-bottom: 0.35rem;
+            margin-bottom: 0.3rem;
         }
 
         .phase-card p {
@@ -109,43 +126,7 @@
             height: 100%;
         }
 
-        .arch-frame {
-            padding: 0;
-            overflow: hidden;
-            min-height: 88vh;
-        }
-
-        .arch-frame iframe {
-            width: 100%;
-            height: 88vh;
-            min-height: 720px;
-            border: 0;
-            display: block;
-        }
-
-        .arch-frame-wrap {
-            width: min(1500px, 96vw);
-            margin: 0 auto;
-        }
-
-        .arch-frame-note {
-            margin: 0.2rem 0 0.75rem;
-            text-align: right;
-        }
-
-        .arch-frame-note a {
-            color: var(--accent-color);
-            text-decoration: none;
-            border-bottom: 1px solid transparent;
-            transition: border-color 0.2s ease;
-        }
-
-        .arch-frame-note a:hover {
-            border-color: var(--accent-color);
-        }
-
         @media (max-width: 980px) {
-            .arch-kpis,
             .phase-grid,
             .arch-results {
                 grid-template-columns: 1fr;
@@ -175,67 +156,58 @@
     </header>
 
     <main class="blog-view">
-        <div class="architecture-view">
+        <div class="arch-page">
+
+            <!-- ── Intro ── -->
             <section class="content-panel arch-hero">
                 <h1>Owl Park E-Commerce Pipeline</h1>
                 <p>
-                    A live mock webstore and agent workflows feed a real-time analytics pipeline that turns raw events into
-                    decision-ready BI models. The goal is simple: move from "we have data" to "we can act on it fast."
+                    A live mock webstore and AI agent workflows feed a real-time analytics pipeline
+                    that turns raw events into decision-ready BI models.
                 </p>
-                <div class="arch-kpis" aria-label="Pipeline highlights">
-                    <div class="arch-kpi">
-                        <strong>Ingest</strong>
-                        <span>4 scheduled n8n workflows plus live store actions.</span>
-                    </div>
-                    <div class="arch-kpi">
-                        <strong>Store</strong>
-                        <span>Supabase captures raw operational events in real time.</span>
-                    </div>
-                    <div class="arch-kpi">
-                        <strong>Model</strong>
-                        <span>Fabric Dataflow Gen2 builds STAR-oriented reporting tables.</span>
-                    </div>
-                    <div class="arch-kpi">
-                        <strong>Analyze</strong>
-                        <span>Power BI dashboards and MCP-assisted natural-language analysis.</span>
-                    </div>
-                </div>
                 <p class="section-note">
-                    Stack: Supabase, Fabric (Dataflow Gen2, M, Warehouse, Data Lake), n8n, Copilot/Claude + Power BI MCP, Power BI.
+                    Supabase · Microsoft Fabric · n8n · Claude + Power BI MCP · Power BI
                 </p>
             </section>
 
-            <section class="content-panel arch-section">
-                <h2>Why This Pipeline Exists</h2>
-                <ul class="arch-list">
-                    <li>Operational systems are fast for transactions, but hard to analyze at scale.</li>
-                    <li>Warehouse models simplify joins and improve query speed for business teams.</li>
-                    <li>Structured dimensional design makes BI more reliable, maintainable, and reusable.</li>
-                </ul>
-            </section>
+            <!-- ── Infographic ── -->
+            <div class="arch-frame-wrap">
+                <p class="arch-frame-note">
+                    <a href="owl-park-infographic.html" target="_blank" rel="noopener noreferrer">Open full size ↗</a>
+                </p>
+                <section class="content-panel arch-frame">
+                    <iframe
+                        title="Owl Park Data Architecture"
+                        src="owl-park-infographic.html"
+                        loading="lazy"
+                    ></iframe>
+                </section>
+            </div>
 
+            <!-- ── Pipeline phases ── -->
             <section class="content-panel arch-section">
                 <h2>Pipeline Flow</h2>
                 <div class="phase-grid">
                     <article class="phase-card">
-                        <h3>Phase 1: Ingest</h3>
-                        <p>Agents handle pricing, consumer purchases, restocking, and sellout logging. Store purchases directly influence agent behavior.</p>
+                        <h3>1 — Ingest</h3>
+                        <p>Four n8n agent workflows handle dynamic pricing, consumer purchases, restocking, and sellout logging. Live store purchases directly influence agent behavior.</p>
                     </article>
                     <article class="phase-card">
-                        <h3>Phase 2: Store</h3>
-                        <p>Supabase receives transactions, weather impact, events, products, visit dates, and warehouse/sellout activity as the raw source layer.</p>
+                        <h3>2 — Store</h3>
+                        <p>Supabase captures transactions, weather impact, events, products, visit dates, and warehouse activity as the raw source layer.</p>
                     </article>
                     <article class="phase-card">
-                        <h3>Phase 3: Transform, Model, Store</h3>
-                        <p>Fabric pulls data on a real-time schedule, transforms it into dimensional/fact models, and writes to Warehouse (live) plus Lake (daily backup).</p>
+                        <h3>3 — Transform &amp; Model</h3>
+                        <p>Fabric pulls data on a real-time schedule, shapes it into dimensional and fact models, then writes to Warehouse (live) and Lake (daily backup).</p>
                     </article>
                     <article class="phase-card">
-                        <h3>Phase 4: Analyze and Act</h3>
-                        <p>Dashboards and AI-assisted analysis drive schedule optimization and pricing-agent tuning inside fairness boundaries.</p>
+                        <h3>4 — Analyze &amp; Act</h3>
+                        <p>Power BI dashboards and AI-assisted analysis drive schedule optimization and pricing-agent tuning inside critic-enforced fairness boundaries.</p>
                     </article>
                 </div>
             </section>
 
+            <!-- ── Status ── -->
             <section class="content-panel arch-section">
                 <h2>Current Status</h2>
                 <div class="arch-results">
@@ -251,18 +223,6 @@
                 <p class="section-note">Infographic generated with Claude Opus 4.6.</p>
             </section>
 
-            <div class="arch-frame-wrap">
-                <p class="arch-frame-note">
-                    <a href="owl-park-infographic.html" target="_blank" rel="noopener noreferrer">Open infographic full size ↗</a>
-                </p>
-                <section class="content-panel arch-frame">
-                    <iframe
-                        title="Owl Park Data Architecture"
-                        src="owl-park-infographic.html"
-                        loading="lazy"
-                    ></iframe>
-                </section>
-            </div>
         </div>
     </main>
 
