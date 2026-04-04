@@ -36,8 +36,68 @@
     <main class="blog-view">
         <div class="blog-intro">
             <h1>Ecommerce Data Architecture</h1>
-            <p>Interactive architecture view from your EcommerceArchitecture project.</p>
+            <p>From AI-driven data generation to BI reporting in a live mock webstore pipeline.</p>
         </div>
+
+        <section class="content-panel" style="margin-bottom: 1.25rem;">
+            <h2>Pipeline Summary</h2>
+            <p>
+                This project demonstrates why analytics pipelines matter: operational systems collect lots of data, but teams
+                need clean, reliable, analytics-ready tables to make decisions quickly. The pipeline turns raw transactional
+                activity into STAR-style reporting models that support business, marketing, accounting, and optimization workflows.
+            </p>
+            <p class="section-note">
+                Tech stack: Supabase, Microsoft Fabric (Dataflow Gen2, M, Data Lake, Warehouse), n8n,
+                Claude/Copilot + Power BI MCP, and Power BI.
+            </p>
+        </section>
+
+        <section class="content-panel" style="margin-bottom: 1.25rem;">
+            <h2>Architecture Flow</h2>
+            <h3>Phase 1: Ingest</h3>
+            <p>
+                Four scheduled n8n workflows and a live mock webstore generate the core activity stream.
+                Workflows cover dynamic pricing, consumer purchasing behavior, warehouse restocking, and sellout monitoring.
+            </p>
+
+            <h3>Phase 2: Store</h3>
+            <p>
+                Supabase serves as the raw event repository, receiving real-time writes from agents and store activity across
+                transactions, products, weather impact, events, visit dates, warehouse activity, and sellout logs.
+            </p>
+
+            <h3>Phase 3: Transform, Model, Store</h3>
+            <p>
+                Microsoft Fabric pulls from Supabase on a real-time schedule using Dataflow Gen2 and shapes data into
+                dimensional and fact layers organized by domain query groups.
+            </p>
+            <p>
+                Output storage is split by purpose: a real-time Data Warehouse for OLAP and a daily Data Lake backup
+                for historical recovery and archiving.
+            </p>
+
+            <h3>Phase 4: Analyze</h3>
+            <p>
+                Modeled datasets power live Power BI dashboards and natural-language analysis via Claude + Power BI MCP
+                for business goal tracking and n8n engine tuning.
+            </p>
+
+            <h3>Phase 5: Take Action</h3>
+            <p>
+                Insights are translated into operational changes: schedule optimization to maximize token usage per pay cycle
+                and pricing-agent tuning that pushes revenue while staying inside critic-enforced fairness bounds.
+            </p>
+        </section>
+
+        <section class="content-panel" style="margin-bottom: 1.25rem;">
+            <h2>Current Results</h2>
+            <p>Dynamic pricing impact metrics are in progress.</p>
+            <p>
+                Agent cadence is currently balanced to maximize monthly token utilization without exceeding limits,
+                prioritizing the consumer and sellout workflows, then dynamic pricing, then lower-frequency tasks.
+            </p>
+            <p class="section-note">Infographic generated with Claude Opus 4.6.</p>
+        </section>
 
         <section class="content-panel" style="padding: 0; overflow: hidden; min-height: 78vh;">
             <iframe
