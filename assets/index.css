@@ -6,6 +6,13 @@
     --card-bg: rgba(255, 210, 122, 0.06);
     --card-border: rgba(255, 210, 122, 0.22);
     --font-main: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --space-xs: 0.5rem;
+    --space-sm: 0.75rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    --page-gutter: clamp(1rem, 3vw, 2.5rem);
 }
 
 * {
@@ -51,7 +58,7 @@ header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 2rem;
+    padding: var(--space-md) var(--page-gutter);
     position: relative;
     z-index: 10;
     font-size: 0.9rem;
@@ -63,12 +70,20 @@ header {
 }
 
 .nav-links {
-    display: flex;
-    gap: 1.6rem;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: var(--page-gutter);
+    right: var(--page-gutter);
+    display: none;
+    flex-direction: column;
+    gap: 0;
+    background: rgba(30, 30, 30, 0.98);
+    border: 1px solid var(--card-border);
+    z-index: 11;
 }
 
 .nav-toggle {
-    display: none;
+    display: inline-flex;
     width: 42px;
     height: 42px;
     border: 1px solid var(--card-border);
@@ -80,6 +95,10 @@ header {
     cursor: pointer;
 }
 
+body.mobile-nav-open .nav-links {
+    display: flex;
+}
+
 .nav-toggle span {
     width: 18px;
     height: 2px;
@@ -89,7 +108,13 @@ header {
 .nav-links a {
     color: var(--secondary-text);
     text-decoration: none;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--card-border);
     transition: color 0.2s, text-shadow 0.2s;
+}
+
+.nav-links a:last-child {
+    border-bottom: 0;
 }
 
 .nav-links a:hover,
@@ -153,21 +178,24 @@ main {
     position: relative;
     z-index: 5;
     display: grid;
-    grid-template-columns: minmax(0, 420px) minmax(0, 520px) minmax(0, 300px);
-    grid-template-areas: "chatbot feature intro";
-    gap: clamp(18px, 2.4vw, 36px);
-    align-items: center;
-    justify-content: center;
-    width: min(100%, 1460px);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+        "feature"
+        "intro"
+        "chatbot";
+    gap: var(--space-lg);
+    align-items: start;
+    justify-content: stretch;
+    width: min(100%, 1100px);
     margin: 0 auto;
-    padding: 1.5rem 2rem 86px;
+    padding: var(--space-lg) var(--page-gutter) var(--space-2xl);
 }
 
 .profile-card {
     grid-area: feature;
     width: 100%;
-    max-width: 520px;
-    justify-self: end;
+    max-width: 560px;
+    justify-self: center;
     background: var(--card-bg);
     backdrop-filter: blur(10px);
     border: 1px solid var(--card-border);
@@ -246,8 +274,8 @@ main {
 .intro-text {
     grid-area: intro;
     width: 100%;
-    max-width: 300px;
-    justify-self: start;
+    max-width: 560px;
+    justify-self: center;
 }
 
 .intro-text p {
@@ -257,16 +285,17 @@ main {
 }
 
 .section-note {
-    font-size: 1.1rem;
+    font-size: clamp(1rem, 0.94rem + 0.4vw, 1.18rem);
     color: var(--secondary-text);
 }
 
 .chatbot-panel {
     grid-area: chatbot;
     width: 100%;
-    max-width: 420px;
+    max-width: 560px;
     min-width: 0;
-    height: 560px;
+    min-height: 480px;
+    height: clamp(460px, 58vh, 560px);
     background: var(--card-bg);
     backdrop-filter: blur(10px);
     border: 1px solid var(--card-border);
@@ -307,15 +336,15 @@ main {
 }
 
 footer {
-    position: fixed;
-    bottom: 0;
+    position: relative;
     width: 100%;
     z-index: 10;
     background: var(--bg-color);
     border-top: 1px solid var(--card-border);
     display: flex;
-    align-items: center;
-    height: 60px;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 60px;
 }
 
 .marquee {
@@ -323,7 +352,7 @@ footer {
     overflow: hidden;
     display: flex;
     align-items: center;
-    height: 100%;
+    min-height: 52px;
     mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
     -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
 }
@@ -356,12 +385,13 @@ footer {
 
 .footer-socials {
     display: flex;
-    gap: 20px;
-    padding: 0 2rem;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px var(--space-md);
     background: var(--bg-color);
-    height: 100%;
+    height: auto;
     align-items: center;
-    border-left: 1px solid var(--card-border);
+    border-top: 1px solid var(--card-border);
 }
 
 .footer-socials a {
@@ -412,77 +442,58 @@ body::after {
 ::-webkit-scrollbar-thumb { background: #5a4a2b; border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: #7b6640; }
 
-@media (max-width: 1450px) {
+@media (min-width: 980px) {
+    header {
+        padding: var(--space-lg) var(--space-xl);
+    }
+
+    .nav-toggle {
+        display: none;
+    }
+
+    .nav-links {
+        position: static;
+        display: flex;
+        flex-direction: row;
+        gap: 1.6rem;
+        background: transparent;
+        border: 0;
+    }
+
+    .nav-links a {
+        padding: 0;
+        border-bottom: 0;
+    }
+
+    footer {
+        position: fixed;
+        bottom: 0;
+        flex-direction: row;
+        align-items: center;
+    }
+
+    .footer-socials {
+        justify-content: flex-start;
+        border-top: 0;
+        border-left: 1px solid var(--card-border);
+        padding: 0 2rem;
+        height: 100%;
+    }
+}
+
+@media (min-width: 1200px) {
     main {
         grid-template-columns: minmax(300px, 420px) minmax(360px, 520px);
         grid-template-areas:
             "chatbot feature"
             ". intro";
         align-content: center;
+        width: min(100%, 1460px);
+        padding-bottom: calc(var(--space-2xl) + 3.5rem);
     }
 
     .intro-text {
         max-width: 420px;
         justify-self: end;
-    }
-}
-
-@media (max-width: 980px) {
-    header {
-        padding: 1rem;
-    }
-
-    .nav-toggle {
-        display: inline-flex;
-        z-index: 12;
-    }
-
-    .nav-links {
-        position: absolute;
-        top: calc(100% + 8px);
-        left: 1rem;
-        right: 1rem;
-        display: none;
-        flex-direction: column;
-        gap: 0;
-        background: rgba(30, 30, 30, 0.98);
-        border: 1px solid var(--card-border);
-        z-index: 11;
-    }
-
-    body.mobile-nav-open .nav-links {
-        display: flex;
-    }
-
-    .nav-links a {
-        padding: 12px 14px;
-        border-bottom: 1px solid var(--card-border);
-    }
-
-    .nav-links a:last-child {
-        border-bottom: 0;
-    }
-
-    main {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 1rem 1rem 2rem;
-    }
-
-    .intro-text,
-    .chatbot-panel,
-    .footer-socials {
-        display: none;
-    }
-
-    .profile-card {
-        width: min(100%, 440px);
-        max-width: none;
-        justify-self: center;
-    }
-
-    footer {
-        display: none;
     }
 }
