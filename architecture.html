@@ -57,7 +57,7 @@
         }
 
         .arch-frame {
-            --scale: 0.72;
+            --scale: 0.44;
             padding: 0;
             overflow: hidden;
             width: 100%;
@@ -154,10 +154,20 @@
             height: 100%;
         }
 
-        @media (max-width: 980px) {
+        @media (min-width: 700px) {
+            .arch-frame {
+                --scale: 0.58;
+            }
+        }
+
+        @media (min-width: 980px) {
+            .arch-frame {
+                --scale: 0.72;
+            }
+
             .phase-grid,
             .arch-results {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
     </style>
